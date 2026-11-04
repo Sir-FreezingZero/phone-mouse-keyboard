@@ -11,8 +11,14 @@ being controlled: the phone shows up as an ordinary Bluetooth keyboard/mouse.
   - tap to left-click, two-finger tap to right-click
   - two-finger drag scrolls
   - hold a button while dragging on the trackpad to click-and-drag
+  - **⋮ → Mouse settings:** pointer speed and acceleration, scroll speed and direction
+    (natural or classic), tap to click, two-finger tap to right-click, show/hide the buttons,
+    vibrate on click. Settings are saved automatically.
 - **Keyboard tab:** a text box. Whatever you type with the phone's keyboard (including
   autocorrect, swipe typing and backspace) is replayed on the computer.
+  - **⋮ → Keyboard settings:** a delay per character and a random extra delay, so long pasted
+    text is typed out gradually (with a **Stop** button while it sends); phone autocorrect on or
+    off; clear the box after Enter.
 - **Menu → Connect → Bluetooth:** one page for everything connection-related: permissions,
   connection type, pairing instructions, and connecting to or disconnecting from a computer.
 
@@ -81,6 +87,7 @@ app/src/main/java/io/github/phonemousekeyboard/
 │   ├── KeyStroke.kt              Key code + modifiers; common special keys
 │   ├── UsKeyboardLayout.kt       Character → key stroke for a US layout host
 │   ├── TextDiff.kt               Text box edits → Backspaces + typed characters
+│   ├── TypingQueue.kt            Sends key strokes one by one, with optional delays
 │   └── MouseButton.kt
 └── ui/
     ├── MainScreen.kt             Header, current page, bottom tabs, menu
@@ -88,8 +95,8 @@ app/src/main/java/io/github/phonemousekeyboard/
     ├── AppHeader.kt              Menu button, connection dot + centred title, ⋮ menu
     ├── AppMenu.kt                Slide-out menu
     ├── BottomTabBar.kt
-    ├── mouse/                    Trackpad, gestures, mouse buttons
-    ├── keyboard/                 Text box page
+    ├── mouse/                    Trackpad, gestures, mouse buttons, mouse settings
+    ├── keyboard/                 Text box page, keyboard settings
     ├── bluetooth/                Bluetooth settings page
     ├── components/               Reusable settings groups, rows and buttons
     └── theme/                    Minimal dark theme

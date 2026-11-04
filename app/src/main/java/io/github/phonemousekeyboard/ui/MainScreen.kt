@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,7 +24,9 @@ import io.github.phonemousekeyboard.bluetooth.ConnectionState
 import io.github.phonemousekeyboard.ui.bluetooth.BluetoothActions
 import io.github.phonemousekeyboard.ui.bluetooth.BluetoothScreen
 import io.github.phonemousekeyboard.ui.keyboard.KeyboardScreen
+import io.github.phonemousekeyboard.ui.keyboard.KeyboardSettingsSheet
 import io.github.phonemousekeyboard.ui.mouse.MouseScreen
+import io.github.phonemousekeyboard.ui.mouse.MouseSettingsSheet
 import kotlinx.coroutines.launch
 
 /** Actions that need the Activity, because they open system dialogs or other apps. */
@@ -45,10 +49,16 @@ fun MainScreen(
 ) {
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val bluetoothState by viewModel.bluetoothUiState.collectAsStateWithLifecycle()
+    val mouseSettings by viewModel.mouseSettings.collectAsStateWithLifecycle()
+    val keyboardSettings by viewModel.keyboardSettings.collectAsStateWithLifecycle()
+    val pendingKeystrokes by viewModel.pendingKeystrokes.collectAsStateWithLifecycle()
 
     var currentScreen by rememberSaveable { mutableStateOf(Screen.MOUSE) }
     // Where the back button returns to from a menu page.
     var lastTab by rememberSaveable { mutableStateOf(Screen.MOUSE) }
+
+    var isMouseSettingsOpen by rememberSaveable { mutableStateOf(false) }
+    var isKeyboardSettingsOpen by rememberSaveable { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -94,6 +104,19 @@ fun MainScreen(
                     title = currentScreen.title,
                     isConnected = connectionState is ConnectionState.Connected,
                     onMenuClick = { scope.launch { drawerState.open() } },
+                    overflowItems = when (currentScreen) {
+                        Screen.MOUSE -> settingsOverflowItems(
+                            settingsLabel = "Mouse settings",
+                            onOpenSettings = { isMouseSettingsOpen = true },
+                            onReset = viewModel::resetMouseSettings,
+                        )
+                        Screen.KEYBOARD -> settingsOverflowItems(
+                            settingsLabel = "Keyboard settings",
+                            onOpenSettings = { isKeyboardSettingsOpen = true },
+                            onReset = viewModel::resetKeyboardSettings,
+                        )
+                        Screen.BLUETOOTH -> null
+                    },
                 )
             },
             bottomBar = {
@@ -109,6 +132,7 @@ fun MainScreen(
 
             when (currentScreen) {
                 Screen.MOUSE -> MouseScreen(
+                    settings = mouseSettings,
                     onMove = viewModel::moveMouse,
                     onScroll = viewModel::scroll,
                     onClick = viewModel::clickMouseButton,
@@ -118,7 +142,10 @@ fun MainScreen(
                 )
 
                 Screen.KEYBOARD -> KeyboardScreen(
+                    settings = keyboardSettings,
+                    pendingCharacters = pendingKeystrokes,
                     onTextChange = viewModel::sendTextChange,
+                    onStopSending = viewModel::stopTyping,
                     // Keep the text box above the on-screen keyboard.
                     modifier = contentModifier.imePadding(),
                 )
@@ -132,4 +159,44 @@ fun MainScreen(
             }
         }
     }
+
+    if (isMouseSettingsOpen) {
+        MouseSettingsSheet(
+            settings = mouseSettings,
+            onChange = viewModel::updateMouseSettings,
+            onReset = viewModel::resetMouseSettings,
+            onDismiss = { isMouseSettingsOpen = false },
+        )
+    }
+
+    if (isKeyboardSettingsOpen) {
+        KeyboardSettingsSheet(
+            settings = keyboardSettings,
+            onChange = viewModel::updateKeyboardSettings,
+            onReset = viewModel::resetKeyboardSettings,
+            onDismiss = { isKeyboardSettingsOpen = false },
+        )
+    }
+}
+
+/** A tab's ⋮ menu: open its settings, or put them back to the defaults. */
+private fun settingsOverflowItems(
+    settingsLabel: String,
+    onOpenSettings: () -> Unit,
+    onReset: () -> Unit,
+): OverflowItems = { closeMenu ->
+    DropdownMenuItem(
+        text = { Text(settingsLabel) },
+        onClick = {
+            closeMenu()
+            onOpenSettings()
+        },
+    )
+    DropdownMenuItem(
+        text = { Text("Reset to defaults") },
+        onClick = {
+            closeMenu()
+            onReset()
+        },
+    )
 }

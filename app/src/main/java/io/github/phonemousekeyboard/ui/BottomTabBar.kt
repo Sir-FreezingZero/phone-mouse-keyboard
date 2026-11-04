@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -62,6 +63,8 @@ private fun TabItem(
 
     Box(
         modifier = modifier
+            // Fill the bar's height so the label is centred and the whole tab is tappable.
+            .fillMaxHeight()
             .selectable(selected = isSelected, onClick = onClick, role = Role.Tab),
     ) {
         Box(

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -51,6 +52,7 @@ fun AppHeader(
     isConnected: Boolean,
     onMenuClick: () -> Unit,
     modifier: Modifier = Modifier,
+    overflowItems: OverflowItems? = null,
 ) {
     Column(modifier = modifier.statusBarsPadding()) {
         Box(
@@ -78,7 +80,7 @@ fun AppHeader(
             }
 
             Box(modifier = Modifier.align(Alignment.CenterEnd)) {
-                OverflowMenu()
+                OverflowMenu(overflowItems)
             }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outline)
@@ -100,10 +102,14 @@ private fun ConnectionDot(isConnected: Boolean) {
 }
 
 /**
- * The "⋮" menu. It has no options yet; add [DropdownMenuItem]s here as features arrive.
+ * Options for the "⋮" menu, supplied by the current page. Receives a function that closes the
+ * menu, to call when an option is chosen.
  */
+typealias OverflowItems = @Composable ColumnScope.(closeMenu: () -> Unit) -> Unit
+
+/** The "⋮" menu, showing the current page's [items], or a placeholder if it has none. */
 @Composable
-private fun OverflowMenu() {
+private fun OverflowMenu(items: OverflowItems?) {
     var isExpanded by remember { mutableStateOf(false) }
 
     Box {
@@ -114,11 +120,15 @@ private fun OverflowMenu() {
             expanded = isExpanded,
             onDismissRequest = { isExpanded = false },
         ) {
-            DropdownMenuItem(
-                text = { Text("No options yet") },
-                onClick = {},
-                enabled = false,
-            )
+            if (items != null) {
+                items(this) { isExpanded = false }
+            } else {
+                DropdownMenuItem(
+                    text = { Text("No options for this page") },
+                    onClick = {},
+                    enabled = false,
+                )
+            }
         }
     }
 }

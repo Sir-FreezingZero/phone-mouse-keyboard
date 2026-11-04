@@ -14,10 +14,15 @@ import io.github.phonemousekeyboard.input.HidInput
 import io.github.phonemousekeyboard.input.MouseButton
 import io.github.phonemousekeyboard.input.SpecialKeys
 import io.github.phonemousekeyboard.input.TextDiff
+import io.github.phonemousekeyboard.input.TypingQueue
 import io.github.phonemousekeyboard.input.UsKeyboardLayout
 import io.github.phonemousekeyboard.ui.bluetooth.BluetoothUiState
 import io.github.phonemousekeyboard.ui.bluetooth.DeviceItem
 import io.github.phonemousekeyboard.ui.bluetooth.DeviceStatus
+import io.github.phonemousekeyboard.ui.keyboard.KeyboardSettings
+import io.github.phonemousekeyboard.ui.keyboard.KeyboardSettingsStore
+import io.github.phonemousekeyboard.ui.mouse.MouseSettings
+import io.github.phonemousekeyboard.ui.mouse.MouseSettingsStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +31,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 /**
  * Owns the Bluetooth objects so they survive screen rotation, and translates UI events
@@ -36,6 +42,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val connection = HidConnection(application, viewModelScope)
     private val input = HidInput(connection)
     private val deviceManager = BluetoothDeviceManager(application)
+    private val mouseSettingsStore = MouseSettingsStore(application)
+    private val keyboardSettingsStore = KeyboardSettingsStore(application)
+
+    private val typingQueue = TypingQueue(
+        scope = viewModelScope,
+        type = { key -> input.typeKey(key) },
+        pauseAfterKeyMillis = ::pauseAfterKeyMillis,
+    )
 
     private var hasBluetoothPermission = false
 
@@ -109,6 +123,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- Mouse ----
 
+    val mouseSettings: StateFlow<MouseSettings> = mouseSettingsStore.settings
+
+    fun updateMouseSettings(change: (MouseSettings) -> MouseSettings) = mouseSettingsStore.update(change)
+
+    fun resetMouseSettings() = mouseSettingsStore.reset()
+
     fun moveMouse(dx: Int, dy: Int) = input.moveMouse(dx, dy)
 
     fun scroll(notches: Int) = input.moveMouse(dx = 0, dy = 0, wheel = notches)
@@ -121,16 +141,40 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- Keyboard ----
 
+    val keyboardSettings: StateFlow<KeyboardSettings> = keyboardSettingsStore.settings
+
+    /** Key presses still waiting to be sent, see [KeyboardSettings.characterDelayMillis]. */
+    val pendingKeystrokes: StateFlow<Int> = typingQueue.pending
+
+    fun updateKeyboardSettings(change: (KeyboardSettings) -> KeyboardSettings) =
+        keyboardSettingsStore.update(change)
+
+    fun resetKeyboardSettings() = keyboardSettingsStore.reset()
+
     /** Sends whatever key presses are needed to turn [oldText] into [newText] on the host. */
     fun sendTextChange(oldText: String, newText: String) {
         val diff = TextDiff.between(oldText, newText)
 
-        repeat(diff.deletions) { input.typeKey(SpecialKeys.BACKSPACE) }
+        repeat(diff.deletions) { typingQueue.add(SpecialKeys.BACKSPACE) }
 
         for (char in diff.insertion) {
             // Characters with no key on a US layout (e.g. emoji) are skipped.
-            UsKeyboardLayout.keyStrokeFor(char)?.let(input::typeKey)
+            UsKeyboardLayout.keyStrokeFor(char)?.let(typingQueue::add)
         }
+    }
+
+    /** Drops any typing that hasn't been sent yet. */
+    fun stopTyping() = typingQueue.cancel()
+
+    /** The fixed delay per character plus a fresh random amount of the extra delay. */
+    private fun pauseAfterKeyMillis(): Long {
+        val settings = keyboardSettings.value
+        val randomExtra = if (settings.randomExtraDelayMillis > 0) {
+            Random.nextInt(0, settings.randomExtraDelayMillis + 1)
+        } else {
+            0
+        }
+        return (settings.characterDelayMillis + randomExtra).toLong()
     }
 
     override fun onCleared() {

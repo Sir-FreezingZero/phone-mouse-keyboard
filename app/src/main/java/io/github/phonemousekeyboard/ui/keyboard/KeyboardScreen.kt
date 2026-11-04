@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -28,10 +29,16 @@ import androidx.compose.ui.unit.dp
  *
  * Typing a letter types it on the computer; deleting a letter sends Backspace; autocorrect
  * replacing a word sends the Backspaces and new letters needed to make the same change.
+ *
+ * @param pendingCharacters key presses still waiting to be sent, e.g. while a long paste is
+ *   being typed out with a delay between characters.
  */
 @Composable
 fun KeyboardScreen(
+    settings: KeyboardSettings,
+    pendingCharacters: Int,
     onTextChange: (oldText: String, newText: String) -> Unit,
+    onStopSending: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var text by rememberSaveable { mutableStateOf("") }
@@ -50,25 +57,33 @@ fun KeyboardScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            val isSending = pendingCharacters > 0
             Text(
-                text = "Text typed here is sent to the computer.",
+                text = if (isSending) {
+                    "Sending… $pendingCharacters left"
+                } else {
+                    "Text typed here is sent to the computer."
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
-            // Clearing only resets this box; nothing is deleted on the computer.
-            TextButton(onClick = { text = "" }) {
-                Text("Clear")
+            if (isSending) {
+                TextButton(onClick = onStopSending) { Text("Stop") }
             }
+            // Clearing only resets this box; nothing is deleted on the computer.
+            TextButton(onClick = { text = "" }) { Text("Clear") }
         }
 
         OutlinedTextField(
             value = text,
             onValueChange = { newText ->
                 onTextChange(text, newText)
-                text = newText
+                val pressedEnter = newText.length > text.length && newText.endsWith('\n')
+                text = if (settings.clearAfterEnter && pressedEnter) "" else newText
             },
             placeholder = { Text("Start typing…") },
+            keyboardOptions = KeyboardOptions(autoCorrectEnabled = settings.phoneAutocorrect),
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
