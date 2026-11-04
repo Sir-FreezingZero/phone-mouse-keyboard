@@ -3,34 +3,99 @@ package io.github.phonemousekeyboard
 import android.app.Application
 import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import io.github.phonemousekeyboard.bluetooth.BluetoothDeviceManager
+import io.github.phonemousekeyboard.bluetooth.BluetoothDevicesState
 import io.github.phonemousekeyboard.bluetooth.BluetoothHidController
 import io.github.phonemousekeyboard.bluetooth.ConnectionState
+import io.github.phonemousekeyboard.bluetooth.displayName
 import io.github.phonemousekeyboard.input.MouseButton
 import io.github.phonemousekeyboard.input.SpecialKeys
 import io.github.phonemousekeyboard.input.TextDiff
 import io.github.phonemousekeyboard.input.UsKeyboardLayout
+import io.github.phonemousekeyboard.ui.bluetooth.BluetoothUiState
+import io.github.phonemousekeyboard.ui.bluetooth.DeviceItem
+import io.github.phonemousekeyboard.ui.bluetooth.DeviceStatus
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
- * Owns the Bluetooth controller so the connection survives screen rotation, and translates
- * UI events (finger movement, text edits) into HID input.
+ * Owns the Bluetooth objects so they survive screen rotation, and translates UI events
+ * (finger movement, text edits, button taps) into Bluetooth actions.
  */
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val controller = BluetoothHidController(application)
+    private val deviceManager = BluetoothDeviceManager(application)
+
+    private var hasBluetoothPermission = false
 
     val connectionState: StateFlow<ConnectionState> = controller.state
 
-    /** Call once Bluetooth permissions are granted. */
-    fun startBluetooth() = controller.start()
+    val bluetoothUiState: StateFlow<BluetoothUiState> =
+        combine(deviceManager.state, controller.state, ::buildBluetoothUiState)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BluetoothUiState())
 
-    // ---- Connection ----
+    init {
+        deviceManager.onPaired = ::connectAfterPairing
 
-    fun pairedDevices(): List<BluetoothDevice> = controller.pairedDevices()
+        // Follow the Bluetooth radio being switched on and off, e.g. from quick settings.
+        viewModelScope.launch {
+            deviceManager.state
+                .map { it.isBluetoothEnabled }
+                .distinctUntilChanged()
+                .collect { isEnabled ->
+                    if (!hasBluetoothPermission) return@collect
+                    if (isEnabled) controller.start() else controller.onBluetoothTurnedOff()
+                }
+        }
+    }
 
-    fun connect(device: BluetoothDevice) = controller.connect(device)
+    /** Call whenever the Bluetooth permission is confirmed as granted. Safe to repeat. */
+    fun onBluetoothPermissionGranted() {
+        if (hasBluetoothPermission) return
+        hasBluetoothPermission = true
+        deviceManager.start()
+        controller.start()
+    }
+
+    // ---- Bluetooth page ----
+
+    fun retryBluetoothService() = controller.restart()
+
+    fun startScan() = deviceManager.startScan()
+
+    fun stopScan() = deviceManager.stopScan()
+
+    fun pair(address: String) {
+        deviceManager.findDevice(address)?.let(deviceManager::pair)
+    }
+
+    fun connect(address: String) {
+        deviceManager.findDevice(address)?.let(controller::connect)
+    }
 
     fun disconnect() = controller.disconnect()
+
+    /**
+     * After pairing, Windows and most other hosts connect to the keyboard/mouse on their own.
+     * Give them a moment to do so, and connect from this side only if they haven't.
+     */
+    private fun connectAfterPairing(device: BluetoothDevice) {
+        viewModelScope.launch {
+            delay(HOST_CONNECT_GRACE_MILLIS)
+            val connection = controller.state.value
+            val isLinked = connection is ConnectionState.Connected ||
+                connection is ConnectionState.Connecting
+            if (!isLinked) controller.connect(device)
+        }
+    }
 
     // ---- Mouse ----
 
@@ -59,6 +124,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     override fun onCleared() {
+        deviceManager.close()
         controller.stop()
+    }
+
+    /** Merges the radio/device state and the connection state into what the Bluetooth page shows. */
+    private fun buildBluetoothUiState(
+        devices: BluetoothDevicesState,
+        connection: ConnectionState,
+    ): BluetoothUiState {
+        val connectedAddress = (connection as? ConnectionState.Connected)?.deviceAddress
+        val connectingAddress = (connection as? ConnectionState.Connecting)?.deviceAddress
+
+        return BluetoothUiState(
+            isBluetoothEnabled = devices.isBluetoothEnabled,
+            connectionState = connection,
+            problem = devices.pairingProblem
+                ?: (connection as? ConnectionState.Disconnected)?.problem,
+            isScanning = devices.isScanning,
+            pairedDevices = devices.pairedDevices.map { device ->
+                DeviceItem(
+                    address = device.address,
+                    name = device.displayName(),
+                    status = when (device.address) {
+                        connectedAddress -> DeviceStatus.CONNECTED
+                        connectingAddress -> DeviceStatus.CONNECTING
+                        else -> DeviceStatus.PAIRED
+                    },
+                )
+            },
+            nearbyDevices = devices.nearbyDevices.map { device ->
+                DeviceItem(
+                    address = device.address,
+                    name = device.displayName(),
+                    status = if (device.address == devices.pairingAddress) {
+                        DeviceStatus.PAIRING
+                    } else {
+                        DeviceStatus.NOT_PAIRED
+                    },
+                )
+            },
+        )
+    }
+
+    private companion object {
+        const val HOST_CONNECT_GRACE_MILLIS = 2_000L
     }
 }

@@ -13,6 +13,9 @@ being controlled: the phone shows up as an ordinary Bluetooth keyboard/mouse.
   - hold a button while dragging on the trackpad to click-and-drag
 - **Keyboard tab:** a text box. Whatever you type with the phone's keyboard (including
   autocorrect, swipe typing and backspace) is replayed on the computer.
+- **Menu → Connect → Bluetooth:** one page for everything connection-related: permissions,
+  turning Bluetooth on, making the phone discoverable, scanning for and pairing with nearby
+  devices, and connecting to or disconnecting from a paired computer.
 
 ## Requirements
 
@@ -28,21 +31,33 @@ being controlled: the phone shows up as an ordinary Bluetooth keyboard/mouse.
 
 ## Using it
 
-1. Open the app and grant the Bluetooth permission.
-2. Tap **Connect**, then **Make discoverable**.
-3. On the computer, open Bluetooth settings and pair with your phone.
-4. Back in the app, tap **Connect** and pick the computer. Later you can reconnect straight from
-   this list.
+1. Open the app and grant the Bluetooth permissions.
+2. Open the menu (top left) and go to **Connect → Bluetooth**.
+3. Pair with your computer. Pairing from the computer is the most reliable:
+   - If the phone was paired with the computer before (e.g. as a phone), remove it on the
+     computer and forget the computer on the phone first.
+   - Tap **Start** next to *Make discoverable*.
+   - On Windows: **Settings › Bluetooth & devices › Add device › Bluetooth**, choose the phone,
+     and confirm the code matches on both screens.
+
+   Alternatively, tap **Scan** and then **Pair** next to the computer. Windows then shows a
+   notification asking to allow the pairing, which must be accepted within a few seconds.
+4. The computer usually connects by itself once paired. If not, tap **Connect** next to it
+   under *Paired devices*. The dot in the header turns green when connected.
+
+If something goes wrong, the Bluetooth page shows the reason in red at the top.
 
 ## Project structure
 
 ```
 app/src/main/java/io/github/phonemousekeyboard/
-├── MainActivity.kt             Permissions, "make discoverable" request, hosts the UI
-├── MainViewModel.kt            Turns UI events into HID input; survives rotation
+├── MainActivity.kt             Permissions and system dialogs; hosts the UI
+├── MainViewModel.kt            Turns UI events into Bluetooth actions; survives rotation
+├── BluetoothPermissions.kt     Which permissions are needed on which Android version
 ├── bluetooth/
 │   ├── HidDescriptor.kt        The report descriptor: "I am a keyboard + mouse"
-│   ├── BluetoothHidController  Registers with Android, connects, sends reports
+│   ├── BluetoothHidController  Registers with Android, connects, sends input reports
+│   ├── BluetoothDeviceManager  Bluetooth on/off, paired devices, scanning, pairing
 │   └── ConnectionState.kt      Connection states shown in the UI
 ├── input/
 │   ├── KeyStroke.kt            Key code + modifiers; common special keys
@@ -50,13 +65,38 @@ app/src/main/java/io/github/phonemousekeyboard/
 │   ├── TextDiff.kt             Text box edits → Backspaces + typed characters
 │   └── MouseButton.kt
 └── ui/
-    ├── MainScreen.kt           Connection bar, active tab, bottom tabs
+    ├── MainScreen.kt           Header, current page, bottom tabs, menu
+    ├── Screen.kt               All pages, and which ones are bottom tabs
+    ├── AppHeader.kt            Menu button, connection dot + centred title, ⋮ menu
+    ├── AppMenu.kt              Slide-out menu
     ├── BottomTabBar.kt
     ├── mouse/                  Trackpad, gestures, mouse buttons
-    ├── keyboard/               Text box screen
-    ├── connection/             Status bar and device picker
+    ├── keyboard/               Text box page
+    ├── bluetooth/              Bluetooth settings page
+    ├── components/             Reusable settings groups, rows and buttons
     └── theme/                  Minimal dark theme
 ```
+
+## Troubleshooting
+
+**The computer only sees a phone, not a keyboard/mouse.** The phone advertises itself as a
+keyboard/mouse only while *Keyboard & mouse service* on the Bluetooth page says **Ready**.
+If the computer paired before that, it remembered a plain phone. Remove the phone on the
+computer, forget the computer on the phone, wait for **Ready**, then pair again.
+
+**The service never gets to Ready.** After a few seconds the page explains which step failed:
+- *Android refused the "HID Device" feature*: the phone's manufacturer has disabled Android's
+  Bluetooth keyboard/mouse feature. No app can work around that on this phone.
+- *The feature didn't respond*: the app has already retried three times. Turn Bluetooth off and
+  on or restart the phone, then tap **Retry**. If it never responds, the manufacturer has most
+  likely disabled the feature.
+- *Android didn't accept this app*: another app is acting as a Bluetooth keyboard/mouse. Close
+  it, turn Bluetooth off and on, and tap **Retry**.
+
+To check whether your phone supports the feature at all, try another app that uses it, such as
+[Bluke](https://f-droid.org/packages/dev.arnv.bluke/) or
+[Bluetooth Remote](https://f-droid.org/packages/io.github.jqssun.btremote/). If they can't
+work as a keyboard either, the phone doesn't support it.
 
 ## Known limitations
 

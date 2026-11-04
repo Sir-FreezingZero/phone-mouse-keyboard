@@ -19,19 +19,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
-/** The tabs shown along the bottom of the app. */
-enum class AppTab(val label: String) {
-    MOUSE("Mouse"),
-    KEYBOARD("Keyboard"),
-}
-
 /**
  * Text-only bottom tabs. The selected tab is marked with a bar along its top edge.
+ * When a non-tab page (such as Bluetooth) is open, no tab is marked.
  */
 @Composable
 fun BottomTabBar(
-    selectedTab: AppTab,
-    onTabSelected: (AppTab) -> Unit,
+    currentScreen: Screen,
+    onTabSelected: (Screen) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.navigationBarsPadding()) {
@@ -42,10 +37,10 @@ fun BottomTabBar(
                 .height(56.dp)
                 .selectableGroup(),
         ) {
-            AppTab.entries.forEach { tab ->
+            Screen.tabs.forEach { tab ->
                 TabItem(
-                    tab = tab,
-                    isSelected = tab == selectedTab,
+                    label = tab.title,
+                    isSelected = tab == currentScreen,
                     onClick = { onTabSelected(tab) },
                     modifier = Modifier.weight(1f),
                 )
@@ -56,7 +51,7 @@ fun BottomTabBar(
 
 @Composable
 private fun TabItem(
-    tab: AppTab,
+    label: String,
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -77,7 +72,7 @@ private fun TabItem(
                 .align(Alignment.TopCenter),
         )
         Text(
-            text = tab.label,
+            text = label,
             style = MaterialTheme.typography.labelLarge,
             color = textColor,
             modifier = Modifier.align(Alignment.Center),
