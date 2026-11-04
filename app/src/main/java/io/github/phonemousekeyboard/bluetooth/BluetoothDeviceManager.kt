@@ -31,7 +31,7 @@ data class BluetoothDevicesState(
  * Tracks the Bluetooth radio (on/off), the list of paired devices, and scanning for and
  * pairing with nearby devices.
  *
- * This is separate from [BluetoothHidController], which only deals with acting as a
+ * This is separate from [HidConnection], which only deals with acting as a
  * keyboard/mouse once a device is paired.
  *
  * Requires BLUETOOTH_CONNECT for everything, plus BLUETOOTH_SCAN (Android 12+) or

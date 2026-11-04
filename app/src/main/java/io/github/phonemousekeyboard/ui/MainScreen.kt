@@ -65,6 +65,7 @@ fun MainScreen(
             onGrantPermissions = systemActions.requestPermissions,
             onTurnOnBluetooth = systemActions.turnOnBluetooth,
             onRetryService = viewModel::retryBluetoothService,
+            onSwitchMode = viewModel::switchMode,
             onMakeDiscoverable = systemActions.makeDiscoverable,
             onOpenSystemSettings = systemActions.openBluetoothSettings,
             onStartScan = viewModel::startScan,

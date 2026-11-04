@@ -84,6 +84,13 @@ object HidDescriptor {
         0xC0,                           // End Collection
     )
 
+    /** A report meaning "nothing pressed, nothing moved" for [reportId], or null if unknown. */
+    fun emptyReport(reportId: Int): ByteArray? = when (reportId) {
+        KEYBOARD_REPORT_ID -> ByteArray(KEYBOARD_REPORT_SIZE)
+        MOUSE_REPORT_ID -> ByteArray(MOUSE_REPORT_SIZE)
+        else -> null
+    }
+
     /** Lets the descriptor above be written as readable hex values instead of `.toByte()` calls. */
     private fun bytesOf(vararg values: Int): ByteArray =
         ByteArray(values.size) { index -> values[index].toByte() }

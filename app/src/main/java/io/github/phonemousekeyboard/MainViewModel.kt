@@ -6,9 +6,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.phonemousekeyboard.bluetooth.BluetoothDeviceManager
 import io.github.phonemousekeyboard.bluetooth.BluetoothDevicesState
-import io.github.phonemousekeyboard.bluetooth.BluetoothHidController
 import io.github.phonemousekeyboard.bluetooth.ConnectionState
+import io.github.phonemousekeyboard.bluetooth.HidConnection
+import io.github.phonemousekeyboard.bluetooth.HidMode
 import io.github.phonemousekeyboard.bluetooth.displayName
+import io.github.phonemousekeyboard.input.HidInput
 import io.github.phonemousekeyboard.input.MouseButton
 import io.github.phonemousekeyboard.input.SpecialKeys
 import io.github.phonemousekeyboard.input.TextDiff
@@ -31,16 +33,22 @@ import kotlinx.coroutines.launch
  */
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val controller = BluetoothHidController(application)
+    private val connection = HidConnection(application, viewModelScope)
+    private val input = HidInput(connection)
     private val deviceManager = BluetoothDeviceManager(application)
 
     private var hasBluetoothPermission = false
 
-    val connectionState: StateFlow<ConnectionState> = controller.state
+    val connectionState: StateFlow<ConnectionState> = connection.state
 
     val bluetoothUiState: StateFlow<BluetoothUiState> =
-        combine(deviceManager.state, controller.state, ::buildBluetoothUiState)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BluetoothUiState())
+        combine(
+            deviceManager.state,
+            connection.state,
+            connection.mode,
+            connection.classicProblem,
+            ::buildBluetoothUiState,
+        ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BluetoothUiState())
 
     init {
         deviceManager.onPaired = ::connectAfterPairing
@@ -52,7 +60,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 .distinctUntilChanged()
                 .collect { isEnabled ->
                     if (!hasBluetoothPermission) return@collect
-                    if (isEnabled) controller.start() else controller.onBluetoothTurnedOff()
+                    if (isEnabled) connection.start() else connection.onBluetoothTurnedOff()
                 }
         }
     }
@@ -62,12 +70,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (hasBluetoothPermission) return
         hasBluetoothPermission = true
         deviceManager.start()
-        controller.start()
+        connection.start()
     }
 
     // ---- Bluetooth page ----
 
-    fun retryBluetoothService() = controller.restart()
+    fun retryBluetoothService() = connection.restart()
+
+    fun switchMode(mode: HidMode) = connection.switchTo(mode)
 
     fun startScan() = deviceManager.startScan()
 
@@ -78,10 +88,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun connect(address: String) {
-        deviceManager.findDevice(address)?.let(controller::connect)
+        deviceManager.findDevice(address)?.let(connection::connect)
     }
 
-    fun disconnect() = controller.disconnect()
+    fun disconnect() = connection.disconnect()
 
     /**
      * After pairing, Windows and most other hosts connect to the keyboard/mouse on their own.
@@ -90,24 +100,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun connectAfterPairing(device: BluetoothDevice) {
         viewModelScope.launch {
             delay(HOST_CONNECT_GRACE_MILLIS)
-            val connection = controller.state.value
-            val isLinked = connection is ConnectionState.Connected ||
-                connection is ConnectionState.Connecting
-            if (!isLinked) controller.connect(device)
+            val current = connection.state.value
+            val isLinked = current is ConnectionState.Connected ||
+                current is ConnectionState.Connecting
+            if (!isLinked) connection.connect(device)
         }
     }
 
     // ---- Mouse ----
 
-    fun moveMouse(dx: Int, dy: Int) = controller.moveMouse(dx, dy)
+    fun moveMouse(dx: Int, dy: Int) = input.moveMouse(dx, dy)
 
-    fun scroll(notches: Int) = controller.moveMouse(dx = 0, dy = 0, wheel = notches)
+    fun scroll(notches: Int) = input.moveMouse(dx = 0, dy = 0, wheel = notches)
 
-    fun pressMouseButton(button: MouseButton) = controller.pressMouseButton(button)
+    fun pressMouseButton(button: MouseButton) = input.pressMouseButton(button)
 
-    fun releaseMouseButton(button: MouseButton) = controller.releaseMouseButton(button)
+    fun releaseMouseButton(button: MouseButton) = input.releaseMouseButton(button)
 
-    fun clickMouseButton(button: MouseButton) = controller.clickMouseButton(button)
+    fun clickMouseButton(button: MouseButton) = input.clickMouseButton(button)
 
     // ---- Keyboard ----
 
@@ -115,32 +125,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun sendTextChange(oldText: String, newText: String) {
         val diff = TextDiff.between(oldText, newText)
 
-        repeat(diff.deletions) { controller.typeKey(SpecialKeys.BACKSPACE) }
+        repeat(diff.deletions) { input.typeKey(SpecialKeys.BACKSPACE) }
 
         for (char in diff.insertion) {
             // Characters with no key on a US layout (e.g. emoji) are skipped.
-            UsKeyboardLayout.keyStrokeFor(char)?.let(controller::typeKey)
+            UsKeyboardLayout.keyStrokeFor(char)?.let(input::typeKey)
         }
     }
 
     override fun onCleared() {
         deviceManager.close()
-        controller.stop()
+        connection.stop()
     }
 
     /** Merges the radio/device state and the connection state into what the Bluetooth page shows. */
     private fun buildBluetoothUiState(
         devices: BluetoothDevicesState,
-        connection: ConnectionState,
+        connectionState: ConnectionState,
+        mode: HidMode,
+        classicProblem: String?,
     ): BluetoothUiState {
-        val connectedAddress = (connection as? ConnectionState.Connected)?.deviceAddress
-        val connectingAddress = (connection as? ConnectionState.Connecting)?.deviceAddress
+        val connectedAddress = (connectionState as? ConnectionState.Connected)?.deviceAddress
+        val connectingAddress = (connectionState as? ConnectionState.Connecting)?.deviceAddress
 
         return BluetoothUiState(
             isBluetoothEnabled = devices.isBluetoothEnabled,
-            connectionState = connection,
+            connectionState = connectionState,
+            mode = mode,
+            classicProblem = classicProblem,
             problem = devices.pairingProblem
-                ?: (connection as? ConnectionState.Disconnected)?.problem,
+                ?: (connectionState as? ConnectionState.Disconnected)?.problem,
             isScanning = devices.isScanning,
             pairedDevices = devices.pairedDevices.map { device ->
                 DeviceItem(

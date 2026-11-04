@@ -1,11 +1,15 @@
 package io.github.phonemousekeyboard.ui.bluetooth
 
 import io.github.phonemousekeyboard.bluetooth.ConnectionState
+import io.github.phonemousekeyboard.bluetooth.HidMode
 
 /** Everything shown on the Bluetooth page. Devices are identified by their address. */
 data class BluetoothUiState(
     val isBluetoothEnabled: Boolean = false,
     val connectionState: ConnectionState = ConnectionState.Starting("Waiting…"),
+    val mode: HidMode = HidMode.CLASSIC,
+    /** Why classic Bluetooth couldn't be used, when that's why [mode] is BLE. */
+    val classicProblem: String? = null,
     /** The most recent pairing or connection failure, explained for the user. */
     val problem: String? = null,
     val pairedDevices: List<DeviceItem> = emptyList(),
@@ -36,6 +40,7 @@ data class BluetoothActions(
     val onGrantPermissions: () -> Unit,
     val onTurnOnBluetooth: () -> Unit,
     val onRetryService: () -> Unit,
+    val onSwitchMode: (HidMode) -> Unit,
     val onMakeDiscoverable: () -> Unit,
     val onOpenSystemSettings: () -> Unit,
     val onStartScan: () -> Unit,

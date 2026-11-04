@@ -14,14 +14,25 @@ being controlled: the phone shows up as an ordinary Bluetooth keyboard/mouse.
 - **Keyboard tab:** a text box. Whatever you type with the phone's keyboard (including
   autocorrect, swipe typing and backspace) is replayed on the computer.
 - **Menu → Connect → Bluetooth:** one page for everything connection-related: permissions,
-  turning Bluetooth on, making the phone discoverable, scanning for and pairing with nearby
-  devices, and connecting to or disconnecting from a paired computer.
+  connection type, pairing instructions, and connecting to or disconnecting from a computer.
+
+## Two ways to be a keyboard
+
+The app can present the phone to a computer in two standard ways. Both work without any
+software on the computer.
+
+| Connection type | How | Phone support |
+| --- | --- | --- |
+| **Classic Bluetooth** | Android's built-in "HID Device" profile | Android 9+, but some manufacturers disable it |
+| **Bluetooth Low Energy** | "HID over GATT", like most modern wireless mice | Most phones that can advertise over BLE |
+
+The app tries classic Bluetooth first. If the phone doesn't have it, the app switches to
+Bluetooth Low Energy by itself and remembers that. You can also switch on the Bluetooth page.
 
 ## Requirements
 
-- Android 9 (API 28) or newer. The app uses Android's `BluetoothHidDevice` API.
-- A phone whose manufacturer hasn't disabled the Bluetooth HID Device profile. Most do support
-  it, but a few devices don't. In that case the app says so at the top of the screen.
+- Android 9 (API 28) or newer.
+- Either the classic Bluetooth "HID Device" profile, or Bluetooth Low Energy advertising.
 
 ## Building
 
@@ -32,71 +43,74 @@ being controlled: the phone shows up as an ordinary Bluetooth keyboard/mouse.
 ## Using it
 
 1. Open the app and grant the Bluetooth permissions.
-2. Open the menu (top left) and go to **Connect → Bluetooth**.
-3. Pair with your computer. Pairing from the computer is the most reliable:
-   - If the phone was paired with the computer before (e.g. as a phone), remove it on the
-     computer and forget the computer on the phone first.
-   - Tap **Start** next to *Make discoverable*.
-   - On Windows: **Settings › Bluetooth & devices › Add device › Bluetooth**, choose the phone,
-     and confirm the code matches on both screens.
+2. Open the menu (top left) and go to **Connect → Bluetooth**. Wait until
+   *Keyboard & mouse service* says **Ready**.
+3. If the phone was paired with the computer before (e.g. as a phone), remove it on the computer
+   and forget the computer on the phone.
+4. Pair from the computer. On Windows: **Settings › Bluetooth & devices › Add device ›
+   Bluetooth**, then choose the phone.
+   - *Classic Bluetooth:* first tap **Start** next to *Make discoverable*, then confirm the code
+     matches on both screens.
+   - *Bluetooth Low Energy:* the phone is visible automatically while the app is open. Accept the
+     pairing prompts on the phone (there may be two) and on the computer.
+5. The computer connects by itself. The dot next to the page title turns green when connected.
 
-   Alternatively, tap **Scan** and then **Pair** next to the computer. Windows then shows a
-   notification asking to allow the pairing, which must be accepted within a few seconds.
-4. The computer usually connects by itself once paired. If not, tap **Connect** next to it
-   under *Paired devices*. The dot in the header turns green when connected.
-
-If something goes wrong, the Bluetooth page shows the reason in red at the top.
+If something goes wrong, the Bluetooth page shows the reason in red.
 
 ## Project structure
 
 ```
 app/src/main/java/io/github/phonemousekeyboard/
-├── MainActivity.kt             Permissions and system dialogs; hosts the UI
-├── MainViewModel.kt            Turns UI events into Bluetooth actions; survives rotation
-├── BluetoothPermissions.kt     Which permissions are needed on which Android version
+├── MainActivity.kt               Permissions and system dialogs; hosts the UI
+├── MainViewModel.kt              Turns UI events into Bluetooth actions; survives rotation
+├── BluetoothPermissions.kt       Which permissions are needed on which Android version
 ├── bluetooth/
-│   ├── HidDescriptor.kt        The report descriptor: "I am a keyboard + mouse"
-│   ├── BluetoothHidController  Registers with Android, connects, sends input reports
-│   ├── BluetoothDeviceManager  Bluetooth on/off, paired devices, scanning, pairing
-│   └── ConnectionState.kt      Connection states shown in the UI
+│   ├── HidDescriptor.kt          The report descriptor: "I am a keyboard + mouse"
+│   ├── HidTransport.kt           Interface shared by both connection types; HidMode
+│   ├── HidConnection.kt          Picks classic or BLE, falls back automatically
+│   ├── ClassicHidTransport.kt    Classic Bluetooth via Android's HID Device profile
+│   ├── ble/
+│   │   ├── BleHidTransport.kt    Bluetooth Low Energy: GATT server, advertising, pairing
+│   │   ├── HidGattProfile.kt     The HID-over-GATT services and characteristics
+│   │   ├── ReportQueue.kt        Paces input; merges mouse movement
+│   │   └── KnownHosts.kt         Remembers computers that have paired over BLE
+│   ├── BluetoothDeviceManager.kt Bluetooth on/off, paired devices, scanning, pairing
+│   └── ConnectionState.kt        Connection states shown in the UI
 ├── input/
-│   ├── KeyStroke.kt            Key code + modifiers; common special keys
-│   ├── UsKeyboardLayout.kt     Character → key stroke for a US layout host
-│   ├── TextDiff.kt             Text box edits → Backspaces + typed characters
+│   ├── HidInput.kt               Mouse/keyboard actions → input reports
+│   ├── KeyStroke.kt              Key code + modifiers; common special keys
+│   ├── UsKeyboardLayout.kt       Character → key stroke for a US layout host
+│   ├── TextDiff.kt               Text box edits → Backspaces + typed characters
 │   └── MouseButton.kt
 └── ui/
-    ├── MainScreen.kt           Header, current page, bottom tabs, menu
-    ├── Screen.kt               All pages, and which ones are bottom tabs
-    ├── AppHeader.kt            Menu button, connection dot + centred title, ⋮ menu
-    ├── AppMenu.kt              Slide-out menu
+    ├── MainScreen.kt             Header, current page, bottom tabs, menu
+    ├── Screen.kt                 All pages, and which ones are bottom tabs
+    ├── AppHeader.kt              Menu button, connection dot + centred title, ⋮ menu
+    ├── AppMenu.kt                Slide-out menu
     ├── BottomTabBar.kt
-    ├── mouse/                  Trackpad, gestures, mouse buttons
-    ├── keyboard/               Text box page
-    ├── bluetooth/              Bluetooth settings page
-    ├── components/             Reusable settings groups, rows and buttons
-    └── theme/                  Minimal dark theme
+    ├── mouse/                    Trackpad, gestures, mouse buttons
+    ├── keyboard/                 Text box page
+    ├── bluetooth/                Bluetooth settings page
+    ├── components/               Reusable settings groups, rows and buttons
+    └── theme/                    Minimal dark theme
 ```
 
 ## Troubleshooting
 
-**The computer only sees a phone, not a keyboard/mouse.** The phone advertises itself as a
-keyboard/mouse only while *Keyboard & mouse service* on the Bluetooth page says **Ready**.
-If the computer paired before that, it remembered a plain phone. Remove the phone on the
-computer, forget the computer on the phone, wait for **Ready**, then pair again.
+**The computer only sees a phone, not a keyboard/mouse.** The phone presents itself as a
+keyboard/mouse only while *Keyboard & mouse service* says **Ready**. If the computer paired
+before that, it remembered a plain phone. Remove the phone on the computer, forget the computer
+on the phone, wait for **Ready**, then pair again.
 
-**The service never gets to Ready.** After a few seconds the page explains which step failed:
-- *Android refused the "HID Device" feature*: the phone's manufacturer has disabled Android's
-  Bluetooth keyboard/mouse feature. No app can work around that on this phone.
-- *The feature didn't respond*: the app has already retried three times. Turn Bluetooth off and
-  on or restart the phone, then tap **Retry**. If it never responds, the manufacturer has most
-  likely disabled the feature.
-- *Android didn't accept this app*: another app is acting as a Bluetooth keyboard/mouse. Close
-  it, turn Bluetooth off and on, and tap **Retry**.
+**Classic Bluetooth never gets to Ready.** The phone's manufacturer has most likely disabled
+Android's "HID Device" profile. The app switches to Bluetooth Low Energy by itself in that case.
 
-To check whether your phone supports the feature at all, try another app that uses it, such as
-[Bluke](https://f-droid.org/packages/dev.arnv.bluke/) or
-[Bluetooth Remote](https://f-droid.org/packages/io.github.jqssun.btremote/). If they can't
-work as a keyboard either, the phone doesn't support it.
+**The phone doesn't appear in Windows' "Add device" list (Bluetooth Low Energy).** Make sure the
+app is open on the Bluetooth page and says **Ready**. On Windows 11, set **Settings › Bluetooth
+& devices › Devices › Bluetooth devices discovery** to **Advanced** to list every device.
+
+**Bluetooth Low Energy says it can't start.** The phone can't advertise over Bluetooth Low
+Energy, or too many apps are already doing so. Close other Bluetooth apps and tap **Retry**.
 
 ## Known limitations
 
@@ -106,6 +120,13 @@ work as a keyboard either, the phone doesn't support it.
 - **Type at the end of the text box.** Edits are mirrored on the assumption that the cursor is at
   the end. Moving the cursor into the middle of the text will not move the computer's cursor.
 - Characters with no key on a US keyboard (e.g. emoji) are skipped.
+
+## Acknowledgements
+
+The Bluetooth Low Energy implementation follows the approach of
+[BLE-HID-Peripheral-for-Android](https://github.com/kshoji/BLE-HID-Peripheral-for-Android) by
+kshoji (Apache 2.0). Start-up handling for classic Bluetooth was informed by
+[Bluke](https://github.com/arnav-kr/Bluke).
 
 ## Contributing
 

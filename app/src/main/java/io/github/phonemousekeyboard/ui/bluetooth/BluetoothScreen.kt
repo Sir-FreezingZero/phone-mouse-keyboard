@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.phonemousekeyboard.PermissionStatus
 import io.github.phonemousekeyboard.bluetooth.ConnectionState
+import io.github.phonemousekeyboard.bluetooth.HidMode
 import io.github.phonemousekeyboard.ui.components.GroupDivider
 import io.github.phonemousekeyboard.ui.components.GroupNote
 import io.github.phonemousekeyboard.ui.components.GroupTitleButton
@@ -49,9 +50,13 @@ fun BluetoothScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item { StatusGroup(state, permissions, actions) }
-        item { PairingGuideGroup(isReady, actions) }
+        item { PairingGuideGroup(state.mode, isReady, actions) }
         item { PairedDevicesGroup(state, isReady, actions) }
-        item { NearbyDevicesGroup(state, isReady, actions) }
+        // Pairing started from the phone uses classic Bluetooth, which is no use in BLE mode:
+        // there the computer has to find and pair with the phone itself.
+        if (state.mode == HidMode.CLASSIC) {
+            item { NearbyDevicesGroup(state, isReady, actions) }
+        }
         item { SystemGroup(actions) }
     }
 }
@@ -93,6 +98,9 @@ private fun StatusGroup(
         )
         GroupDivider()
 
+        ConnectionTypeRow(state, actions)
+        GroupDivider()
+
         SettingRow(
             title = "Keyboard & mouse service",
             detail = connection.serviceDescription(),
@@ -116,37 +124,82 @@ private fun StatusGroup(
 }
 
 /**
- * Pairing from the computer's side is the most reliable way to set up a new computer, because
- * the computer then reads this phone's keyboard/mouse details as part of pairing.
+ * Classic Bluetooth or Bluetooth Low Energy, with a button to switch. The app switches to BLE
+ * by itself when the phone lacks classic support, and says why.
  */
 @Composable
-private fun PairingGuideGroup(isReady: Boolean, actions: BluetoothActions) {
+private fun ConnectionTypeRow(state: BluetoothUiState, actions: BluetoothActions) {
+    val otherMode = when (state.mode) {
+        HidMode.CLASSIC -> HidMode.BLE
+        HidMode.BLE -> HidMode.CLASSIC
+    }
+    val detail = if (state.mode == HidMode.BLE && state.classicProblem != null) {
+        "${state.mode.label}. Classic Bluetooth isn't available on this phone."
+    } else {
+        state.mode.label
+    }
+
+    SettingRow(
+        title = "Connection type",
+        detail = detail,
+        actionLabel = "Use ${otherMode.shortLabel()}",
+        onAction = { actions.onSwitchMode(otherMode) },
+    )
+}
+
+/**
+ * Pairing is started from the computer in both modes: the computer then reads this phone's
+ * keyboard/mouse details as part of pairing.
+ */
+@Composable
+private fun PairingGuideGroup(mode: HidMode, isReady: Boolean, actions: BluetoothActions) {
+    val waitStep = "Wait until Keyboard & mouse service above says Ready. Pairing before " +
+        "then makes the computer see only a phone."
+    val forgetStep = "If this phone was paired with the computer before, remove it on the " +
+        "computer and forget the computer in Android's Bluetooth settings."
+    val windowsStep = "On Windows: Settings › Bluetooth & devices › Add device › Bluetooth, " +
+        "then choose this phone."
+
     SettingsGroup(title = "Pair with a computer") {
-        NumberedSteps(
-            listOf(
-                "Wait until Keyboard & mouse service above says Ready. Pairing before then " +
-                "makes the computer see only a phone.",
-            "Keep this app open while pairing.",
-                "If this phone was paired with the computer before, remove it on the " +
-                    "computer and forget the computer in Android's Bluetooth settings.",
-                "Tap Start below to make this phone discoverable.",
-                "On Windows: Settings › Bluetooth & devices › Add device › Bluetooth, " +
-                    "then choose this phone.",
-                "Confirm the code matches on both screens. The computer connects by itself.",
-            ),
-        )
-        GroupDivider()
-        SettingRow(
-            title = "Make discoverable",
-            detail = if (isReady) {
-                "Visible to nearby computers for 2 minutes"
-            } else {
-                "Available once the keyboard & mouse service is ready"
-            },
-            actionLabel = "Start",
-            onAction = actions.onMakeDiscoverable,
-            isActionEnabled = isReady,
-        )
+        when (mode) {
+            HidMode.CLASSIC -> {
+                NumberedSteps(
+                    listOf(
+                        waitStep,
+                        "Keep this app open while pairing.",
+                        forgetStep,
+                        "Tap Start below to make this phone discoverable.",
+                        windowsStep,
+                        "Confirm the code matches on both screens. The computer connects " +
+                            "by itself.",
+                    ),
+                )
+                GroupDivider()
+                SettingRow(
+                    title = "Make discoverable",
+                    detail = if (isReady) {
+                        "Visible to nearby computers for 2 minutes"
+                    } else {
+                        "Available once the keyboard & mouse service is ready"
+                    },
+                    actionLabel = "Start",
+                    onAction = actions.onMakeDiscoverable,
+                    isActionEnabled = isReady,
+                )
+            }
+
+            HidMode.BLE -> NumberedSteps(
+                listOf(
+                    waitStep,
+                    "Keep this app open. While nothing is connected, computers nearby can " +
+                        "see this phone as a keyboard and mouse.",
+                    forgetStep,
+                    windowsStep,
+                    "Accept the pairing prompts on the phone and the computer. There may be " +
+                        "two on the phone. The computer connects by itself.",
+                ),
+            )
+        }
     }
 }
 
@@ -271,6 +324,11 @@ private fun ConnectionState.connectionDescription(): String = when (this) {
 @Composable
 private fun ConnectionState.connectionColor() =
     if (this is ConnectionState.Connected) ConnectedGreen else MaterialTheme.colorScheme.onSurfaceVariant
+
+private fun HidMode.shortLabel(): String = when (this) {
+    HidMode.CLASSIC -> "Classic"
+    HidMode.BLE -> "BLE"
+}
 
 private fun DeviceStatus.label(): String = when (this) {
     DeviceStatus.NOT_PAIRED -> "Not paired"
