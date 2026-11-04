@@ -38,8 +38,8 @@ data class SystemActions(
 )
 
 /**
- * Top-level layout: header on top, the current page in the middle, Mouse / Keyboard tabs at
- * the bottom, and a menu that slides in from the left.
+ * Top-level layout: the header on top (swipe its title to switch between Mouse and Keyboard),
+ * the current page below, and a menu that slides in from the left.
  */
 @Composable
 fun MainScreen(
@@ -48,6 +48,7 @@ fun MainScreen(
     systemActions: SystemActions,
 ) {
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
+    val isSendingInput by viewModel.isSendingInput.collectAsStateWithLifecycle()
     val bluetoothState by viewModel.bluetoothUiState.collectAsStateWithLifecycle()
     val mouseSettings by viewModel.mouseSettings.collectAsStateWithLifecycle()
     val keyboardSettings by viewModel.keyboardSettings.collectAsStateWithLifecycle()
@@ -55,7 +56,7 @@ fun MainScreen(
 
     var currentScreen by rememberSaveable { mutableStateOf(Screen.MOUSE) }
     // Where the back button returns to from a menu page.
-    var lastTab by rememberSaveable { mutableStateOf(Screen.MOUSE) }
+    var lastMainPage by rememberSaveable { mutableStateOf(Screen.MOUSE) }
 
     var isMouseSettingsOpen by rememberSaveable { mutableStateOf(false) }
     var isKeyboardSettingsOpen by rememberSaveable { mutableStateOf(false) }
@@ -65,10 +66,10 @@ fun MainScreen(
 
     val navigateTo: (Screen) -> Unit = { screen ->
         currentScreen = screen
-        if (screen.isTab) lastTab = screen
+        if (screen.isMainPage) lastMainPage = screen
     }
 
-    BackHandler(enabled = !currentScreen.isTab) { currentScreen = lastTab }
+    BackHandler(enabled = !currentScreen.isMainPage) { currentScreen = lastMainPage }
 
     val bluetoothActions = remember(viewModel, systemActions) {
         BluetoothActions(
@@ -101,8 +102,10 @@ fun MainScreen(
         Scaffold(
             topBar = {
                 AppHeader(
-                    title = currentScreen.title,
+                    currentScreen = currentScreen,
                     isConnected = connectionState is ConnectionState.Connected,
+                    isSendingInput = isSendingInput,
+                    onScreenSelected = navigateTo,
                     onMenuClick = { scope.launch { drawerState.open() } },
                     overflowItems = when (currentScreen) {
                         Screen.MOUSE -> settingsOverflowItems(
@@ -117,12 +120,6 @@ fun MainScreen(
                         )
                         Screen.BLUETOOTH -> null
                     },
-                )
-            },
-            bottomBar = {
-                BottomTabBar(
-                    currentScreen = currentScreen,
-                    onTabSelected = navigateTo,
                 )
             },
         ) { innerPadding ->

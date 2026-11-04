@@ -1,27 +1,22 @@
 package io.github.phonemousekeyboard.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,75 +25,62 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import io.github.phonemousekeyboard.ui.theme.ConnectedGreen
-
-private val DotSize = 8.dp
-private val TitleDotGap = 8.dp
 
 /**
  * The bar across the top of the app:
  *
- *   [menu]          ● Page title             [⋮]
+ *   [menu]            Page title             [⋮]
+ *   ──────────────═══════════──────────────        status line
  *
- * The dot shows whether a computer is connected. The title is centred on the screen
- * regardless of the dot and the buttons on either side.
+ * On main pages the title can be swiped to move between them ([TitleSwitcher]); other pages
+ * show a plain title. The [StatusLine] underneath shows the connection and input activity.
  */
 @Composable
 fun AppHeader(
-    title: String,
+    currentScreen: Screen,
     isConnected: Boolean,
+    isSendingInput: Boolean,
+    onScreenSelected: (Screen) -> Unit,
     onMenuClick: () -> Unit,
     modifier: Modifier = Modifier,
     overflowItems: OverflowItems? = null,
 ) {
     Column(modifier = modifier.statusBarsPadding()) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
                 .padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(
-                onClick = onMenuClick,
-                modifier = Modifier.align(Alignment.CenterStart),
-            ) {
+            IconButton(onClick = onMenuClick) {
                 Icon(imageVector = Icons.Default.Menu, contentDescription = "Open menu")
             }
 
-            Row(
-                modifier = Modifier.align(Alignment.Center),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(TitleDotGap),
+            // Equal-width buttons on both sides keep this area, and the title, centred.
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.Center,
             ) {
-                ConnectionDot(isConnected = isConnected)
-                Text(text = title, style = MaterialTheme.typography.titleLarge)
-                // An invisible twin of the dot keeps the title itself centred on screen.
-                Spacer(modifier = Modifier.size(DotSize))
+                if (currentScreen.isMainPage) {
+                    TitleSwitcher(
+                        pages = Screen.mainPages,
+                        currentPage = currentScreen,
+                        onPageSelected = onScreenSelected,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    PageTitle(title = currentScreen.title)
+                }
             }
 
-            Box(modifier = Modifier.align(Alignment.CenterEnd)) {
-                OverflowMenu(overflowItems)
-            }
+            OverflowMenu(overflowItems)
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+        StatusLine(isConnected = isConnected, isSendingInput = isSendingInput)
     }
-}
-
-/** Green when a computer is connected, grey otherwise. */
-@Composable
-private fun ConnectionDot(isConnected: Boolean) {
-    val color = if (isConnected) ConnectedGreen else MaterialTheme.colorScheme.outline
-    val description = if (isConnected) "Connected" else "Not connected"
-
-    Box(
-        modifier = Modifier
-            .size(DotSize)
-            .background(color, CircleShape)
-            .semantics { contentDescription = description },
-    )
 }
 
 /**

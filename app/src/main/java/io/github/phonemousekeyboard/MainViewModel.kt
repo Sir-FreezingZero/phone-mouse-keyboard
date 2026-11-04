@@ -11,6 +11,7 @@ import io.github.phonemousekeyboard.bluetooth.HidConnection
 import io.github.phonemousekeyboard.bluetooth.HidMode
 import io.github.phonemousekeyboard.bluetooth.displayName
 import io.github.phonemousekeyboard.input.HidInput
+import io.github.phonemousekeyboard.input.InputActivity
 import io.github.phonemousekeyboard.input.MouseButton
 import io.github.phonemousekeyboard.input.SpecialKeys
 import io.github.phonemousekeyboard.input.TextDiff
@@ -40,7 +41,8 @@ import kotlin.random.Random
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val connection = HidConnection(application, viewModelScope)
-    private val input = HidInput(connection)
+    private val input = HidInput(connection, onInputSent = ::onInputSent)
+    private val inputActivity = InputActivity(viewModelScope)
     private val deviceManager = BluetoothDeviceManager(application)
     private val mouseSettingsStore = MouseSettingsStore(application)
     private val keyboardSettingsStore = KeyboardSettingsStore(application)
@@ -54,6 +56,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var hasBluetoothPermission = false
 
     val connectionState: StateFlow<ConnectionState> = connection.state
+
+    /** True while mouse or keyboard input is being sent to a connected computer. */
+    val isSendingInput: StateFlow<Boolean> = inputActivity.isActive
 
     val bluetoothUiState: StateFlow<BluetoothUiState> =
         combine(
@@ -175,6 +180,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             0
         }
         return (settings.characterDelayMillis + randomExtra).toLong()
+    }
+
+    private fun onInputSent() {
+        // Input only reaches the computer while connected; otherwise it isn't "sent".
+        if (connection.state.value is ConnectionState.Connected) inputActivity.ping()
     }
 
     override fun onCleared() {

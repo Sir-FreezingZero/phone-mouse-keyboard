@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -23,6 +25,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
+
+/** The text box keeps this height; longer text scrolls inside it. */
+private val TextBoxHeight = 160.dp
 
 /**
  * The "Keyboard" tab: a text box that mirrors every edit to the connected computer.
@@ -53,27 +58,12 @@ fun KeyboardScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val isSending = pendingCharacters > 0
-            Text(
-                text = if (isSending) {
-                    "Sending… $pendingCharacters left"
-                } else {
-                    "Text typed here is sent to the computer."
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
-            if (isSending) {
-                TextButton(onClick = onStopSending) { Text("Stop") }
-            }
-            // Clearing only resets this box; nothing is deleted on the computer.
-            TextButton(onClick = { text = "" }) { Text("Clear") }
-        }
+        Text(
+            text = "Text input",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 
         OutlinedTextField(
             value = text,
@@ -86,8 +76,44 @@ fun KeyboardScreen(
             keyboardOptions = KeyboardOptions(autoCorrectEnabled = settings.phoneAutocorrect),
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .height(TextBoxHeight)
                 .focusRequester(focusRequester),
         )
+
+        StatusRow(
+            pendingCharacters = pendingCharacters,
+            onStopSending = onStopSending,
+            onClear = { text = "" },
+        )
+    }
+}
+
+/** What's happening with the typed text, with Stop (while sending) and Clear. */
+@Composable
+private fun StatusRow(
+    pendingCharacters: Int,
+    onStopSending: () -> Unit,
+    onClear: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val isSending = pendingCharacters > 0
+        Text(
+            text = if (isSending) {
+                "Sending… $pendingCharacters left"
+            } else {
+                "Text typed here is sent to the computer."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        if (isSending) {
+            TextButton(onClick = onStopSending) { Text("Stop") }
+        }
+        // Clearing only resets the text box; nothing is deleted on the computer.
+        TextButton(onClick = onClear) { Text("Clear") }
     }
 }

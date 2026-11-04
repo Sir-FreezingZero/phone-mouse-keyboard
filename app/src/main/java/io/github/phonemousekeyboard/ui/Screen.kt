@@ -4,14 +4,17 @@ package io.github.phonemousekeyboard.ui
  * Every page in the app.
  *
  * @param title shown in the header while the page is open.
- * @param isTab whether the page has a tab in the bottom bar. Other pages are opened from the menu.
+ * @param isMainPage whether the page is one of the app's main abilities (Mouse, Keyboard),
+ *   which the user moves between by swiping the header title. Other pages are opened from the
+ *   menu.
  */
-enum class Screen(val title: String, val isTab: Boolean) {
-    MOUSE(title = "Mouse", isTab = true),
-    KEYBOARD(title = "Keyboard", isTab = true),
-    BLUETOOTH(title = "Bluetooth", isTab = false);
+enum class Screen(val title: String, val isMainPage: Boolean) {
+    MOUSE(title = "Mouse", isMainPage = true),
+    KEYBOARD(title = "Keyboard", isMainPage = true),
+    BLUETOOTH(title = "Bluetooth", isMainPage = false);
 
     companion object {
-        val tabs: List<Screen> = entries.filter { it.isTab }
+        /** The main pages, in the order they sit side by side in the header. */
+        val mainPages: List<Screen> = entries.filter { it.isMainPage }
     }
 }

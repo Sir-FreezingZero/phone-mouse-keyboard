@@ -6,7 +6,13 @@ being controlled: the phone shows up as an ordinary Bluetooth keyboard/mouse.
 
 ## Features
 
-- **Mouse tab:** a trackpad with Left and Right buttons
+The app has two main pages, Mouse and Keyboard. Swipe the title at the top to move between them;
+the names of the other pages show faintly either side of the current one.
+
+The line under the header shows the connection at a glance: grey when nothing is connected,
+green when connected, and blue with ripples running along it while input is being sent.
+
+- **Mouse page:** a trackpad with Left and Right buttons
   - one-finger drag moves the pointer
   - tap to left-click, two-finger tap to right-click
   - two-finger drag scrolls
@@ -14,7 +20,7 @@ being controlled: the phone shows up as an ordinary Bluetooth keyboard/mouse.
   - **⋮ → Mouse settings:** pointer speed and acceleration, scroll speed and direction
     (natural or classic), tap to click, two-finger tap to right-click, show/hide the buttons,
     vibrate on click. Settings are saved automatically.
-- **Keyboard tab:** a text box. Whatever you type with the phone's keyboard (including
+- **Keyboard page:** a text box. Whatever you type with the phone's keyboard (including
   autocorrect, swipe typing and backspace) is replayed on the computer.
   - **⋮ → Keyboard settings:** a delay per character and a random extra delay, so long pasted
     text is typed out gradually (with a **Stop** button while it sends); phone autocorrect on or
@@ -59,7 +65,7 @@ Bluetooth Low Energy by itself and remembers that. You can also switch on the Bl
      matches on both screens.
    - *Bluetooth Low Energy:* the phone is visible automatically while the app is open. Accept the
      pairing prompts on the phone (there may be two) and on the computer.
-5. The computer connects by itself. The dot next to the page title turns green when connected.
+5. The computer connects by itself. The line under the header turns green when connected.
 
 If something goes wrong, the Bluetooth page shows the reason in red.
 
@@ -88,13 +94,15 @@ app/src/main/java/io/github/phonemousekeyboard/
 │   ├── UsKeyboardLayout.kt       Character → key stroke for a US layout host
 │   ├── TextDiff.kt               Text box edits → Backspaces + typed characters
 │   ├── TypingQueue.kt            Sends key strokes one by one, with optional delays
+│   ├── InputActivity.kt          Whether input is being sent right now
 │   └── MouseButton.kt
 └── ui/
-    ├── MainScreen.kt             Header, current page, bottom tabs, menu
-    ├── Screen.kt                 All pages, and which ones are bottom tabs
-    ├── AppHeader.kt              Menu button, connection dot + centred title, ⋮ menu
+    ├── MainScreen.kt             Header, current page, menu
+    ├── Screen.kt                 All pages, and which ones are main (swipeable) pages
+    ├── AppHeader.kt              Menu button, title, ⋮ menu
+    ├── TitleSwitcher.kt          Swipeable title with faded neighbouring page names
+    ├── StatusLine.kt             Glowing header line: connection and input activity
     ├── AppMenu.kt                Slide-out menu
-    ├── BottomTabBar.kt
     ├── mouse/                    Trackpad, gestures, mouse buttons, mouse settings
     ├── keyboard/                 Text box page, keyboard settings
     ├── bluetooth/                Bluetooth settings page

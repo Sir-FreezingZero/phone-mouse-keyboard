@@ -6,8 +6,13 @@ import io.github.phonemousekeyboard.bluetooth.HidTransport
 /**
  * Turns mouse and keyboard actions into the input reports described by [HidDescriptor] and
  * hands them to a [HidTransport]. Knows nothing about how the reports travel.
+ *
+ * @param onInputSent called after every report, e.g. to show that input is flowing.
  */
-class HidInput(private val transport: HidTransport) {
+class HidInput(
+    private val transport: HidTransport,
+    private val onInputSent: () -> Unit = {},
+) {
 
     /** Bit field of mouse buttons currently held down. Included in every mouse report. */
     private var pressedButtons = 0
@@ -57,7 +62,7 @@ class HidInput(private val transport: HidTransport) {
         report[1] = dx.toByte()
         report[2] = dy.toByte()
         report[3] = wheel.toByte()
-        transport.sendReport(HidDescriptor.MOUSE_REPORT_ID, report)
+        send(HidDescriptor.MOUSE_REPORT_ID, report)
     }
 
     // ---- Keyboard ----
@@ -67,13 +72,15 @@ class HidInput(private val transport: HidTransport) {
         val press = ByteArray(HidDescriptor.KEYBOARD_REPORT_SIZE)
         press[0] = keyStroke.modifiers.toByte()
         press[2] = keyStroke.keyCode.toByte()
-        transport.sendReport(HidDescriptor.KEYBOARD_REPORT_ID, press)
+        send(HidDescriptor.KEYBOARD_REPORT_ID, press)
 
         // An all-zero report means "no keys held".
-        transport.sendReport(
-            HidDescriptor.KEYBOARD_REPORT_ID,
-            ByteArray(HidDescriptor.KEYBOARD_REPORT_SIZE),
-        )
+        send(HidDescriptor.KEYBOARD_REPORT_ID, ByteArray(HidDescriptor.KEYBOARD_REPORT_SIZE))
+    }
+
+    private fun send(reportId: Int, report: ByteArray) {
+        transport.sendReport(reportId, report)
+        onInputSent()
     }
 
     private companion object {

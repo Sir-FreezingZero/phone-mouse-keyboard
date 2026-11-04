@@ -27,6 +27,12 @@ private val UtilitarianColors = darkColorScheme(
 /** Colour used to indicate a live connection. */
 val ConnectedGreen = Color(0xFF81C784)
 
+/** Colour used while input is being sent to the computer. */
+val ActiveBlue = Color(0xFF64B5F6)
+
+/** Colour of the header's status line when nothing is connected. */
+val IdleGrey = Color(0xFF5A5A5A)
+
 @Composable
 fun PhoneMouseKeyboardTheme(content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = UtilitarianColors, content = content)
