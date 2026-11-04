@@ -24,10 +24,14 @@ import io.github.phonemousekeyboard.ui.components.GroupTitleButton
 import io.github.phonemousekeyboard.ui.components.SettingsGroup
 import io.github.phonemousekeyboard.ui.components.SliderRow
 import io.github.phonemousekeyboard.ui.components.SwitchRow
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /** Delay sliders move in steps of this many milliseconds. */
 private const val DELAY_STEP_MILLIS = 5
+
+/** Fade sliders move in steps of this many milliseconds. */
+private const val FADE_STEP_MILLIS = 50
 
 /**
  * Keyboard settings, opened from the ⋮ menu on the Keyboard tab. Changes apply immediately
@@ -69,6 +73,7 @@ fun KeyboardSettingsSheet(
             }
 
             TypingSpeedGroup(settings, onChange)
+            FadeGroup(settings, onChange)
             TextBoxGroup(settings, onChange)
         }
     }
@@ -128,6 +133,44 @@ private fun TextBoxGroup(
     }
 }
 
+@Composable
+private fun FadeGroup(
+    settings: KeyboardSettings,
+    onChange: ((KeyboardSettings) -> KeyboardSettings) -> Unit,
+) {
+    SettingsGroup(title = "Typed text") {
+        SwitchRow(
+            title = "Fade out typed text",
+            detail = "Characters fade from the box after a while. Backspace still deletes " +
+                "on the computer once the box is empty",
+            checked = settings.fadeOutText,
+            onCheckedChange = { enabled -> onChange { it.copy(fadeOutText = enabled) } },
+        )
+        if (settings.fadeOutText) {
+            GroupDivider()
+            SliderRow(
+                title = "Stay visible for",
+                value = settings.fadeDelayMillis.toFloat(),
+                valueRange = KeyboardSettings.FADE_DELAY_RANGE_MILLIS.toFloatRange(),
+                valueLabel = settings.fadeDelayMillis.asSeconds(),
+                onValueChange = { millis ->
+                    onChange { it.copy(fadeDelayMillis = millis.roundToStep(FADE_STEP_MILLIS)) }
+                },
+            )
+            GroupDivider()
+            SliderRow(
+                title = "Fade duration",
+                value = settings.fadeDurationMillis.toFloat(),
+                valueRange = KeyboardSettings.FADE_DURATION_RANGE_MILLIS.toFloatRange(),
+                valueLabel = settings.fadeDurationMillis.asSeconds(),
+                onValueChange = { millis ->
+                    onChange { it.copy(fadeDurationMillis = millis.roundToStep(FADE_STEP_MILLIS)) }
+                },
+            )
+        }
+    }
+}
+
 /** Explains in words what the two delay sliders add up to. */
 private fun typingSpeedSummary(settings: KeyboardSettings): String {
     val fixed = settings.characterDelayMillis
@@ -140,4 +183,12 @@ private fun typingSpeedSummary(settings: KeyboardSettings): String {
     }
 }
 
-private fun Float.toDelayStep(): Int = (this / DELAY_STEP_MILLIS).roundToInt() * DELAY_STEP_MILLIS
+private fun Float.toDelayStep(): Int = roundToStep(DELAY_STEP_MILLIS)
+
+private fun Float.roundToStep(step: Int): Int = (this / step).roundToInt() * step
+
+private fun IntRange.toFloatRange(): ClosedFloatingPointRange<Float> = first.toFloat()..last.toFloat()
+
+/** "1.5 s", "0.25 s", "10 s". */
+private fun Int.asSeconds(): String =
+    String.format(Locale.US, "%.2f", this / 1000f).trimEnd('0').trimEnd('.') + " s"

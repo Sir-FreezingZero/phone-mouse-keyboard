@@ -28,8 +28,9 @@ class HidConnection(context: Context, scope: CoroutineScope) : HidTransport {
     private val preferences =
         context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
-    private val classic = ClassicHidTransport(context)
-    private val ble = BleHidTransport(context)
+    private val scrollResolution = ScrollResolutionMemory(context)
+    private val classic = ClassicHidTransport(context, scrollResolution)
+    private val ble = BleHidTransport(context, scrollResolution)
 
     private val _mode = MutableStateFlow(loadMode())
     val mode: StateFlow<HidMode> = _mode.asStateFlow()
@@ -96,6 +97,8 @@ class HidConnection(context: Context, scope: CoroutineScope) : HidTransport {
     override fun disconnect() = active.disconnect()
 
     override fun sendReport(reportId: Int, data: ByteArray) = active.sendReport(reportId, data)
+
+    override val wheelUnitsPerNotch: Int get() = active.wheelUnitsPerNotch
 
     private fun transportFor(mode: HidMode): HidTransport = when (mode) {
         HidMode.CLASSIC -> classic

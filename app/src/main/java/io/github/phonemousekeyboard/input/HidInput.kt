@@ -17,13 +17,39 @@ class HidInput(
     /** Bit field of mouse buttons currently held down. Included in every mouse report. */
     private var pressedButtons = 0
 
+    /** Scrolling that hasn't added up to a whole wheel unit yet, in wheel units. */
+    private var unsentWheelUnits = 0f
+
     // ---- Mouse ----
 
+    /** Moves the pointer by ([dx], [dy]). */
+    fun moveMouse(dx: Int, dy: Int) = sendMovement(dx, dy, wheel = 0)
+
     /**
-     * Moves the pointer by ([dx], [dy]) and scrolls by [wheel] notches. Large values are split
-     * into several reports because each report is limited to ±127.
+     * Scrolls by [notches], which may be fractional. Positive scrolls up.
+     *
+     * If the computer has switched on high-resolution scrolling, fractions of a notch are sent
+     * as they come, for smooth scrolling. With [smooth] off, or on computers without it,
+     * scrolling is sent in whole notches.
      */
-    fun moveMouse(dx: Int, dy: Int, wheel: Int = 0) {
+    fun scroll(notches: Float, smooth: Boolean) {
+        val unitsPerNotch = transport.wheelUnitsPerNotch
+        val unitsPerStep = if (smooth) 1 else unitsPerNotch
+
+        unsentWheelUnits += notches * unitsPerNotch
+        val steps = (unsentWheelUnits / unitsPerStep).toInt()
+        if (steps == 0) return
+
+        val units = steps * unitsPerStep
+        unsentWheelUnits -= units
+        sendMovement(dx = 0, dy = 0, wheel = units)
+    }
+
+    /**
+     * Sends pointer movement and wheel units. Large values are split into several reports
+     * because each report is limited to ±127.
+     */
+    private fun sendMovement(dx: Int, dy: Int, wheel: Int) {
         var remainingX = dx
         var remainingY = dy
         var remainingWheel = wheel

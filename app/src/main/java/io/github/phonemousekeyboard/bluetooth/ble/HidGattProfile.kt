@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED
 import android.bluetooth.BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
 import android.bluetooth.BluetoothGattCharacteristic.PROPERTY_NOTIFY
 import android.bluetooth.BluetoothGattCharacteristic.PROPERTY_READ
+import android.bluetooth.BluetoothGattCharacteristic.PROPERTY_WRITE
 import android.bluetooth.BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattService
@@ -17,7 +18,8 @@ import java.util.UUID
  *
  *  HID service (0x1812)
  *    HID Information, Report Map (= [HidDescriptor.REPORT_MAP]), Protocol Mode,
- *    HID Control Point, and one Report characteristic per input report ID.
+ *    HID Control Point, one Report characteristic per input report ID, and one for the
+ *    mouse feature report (the wheel's Resolution Multiplier).
  *  Battery service (0x180F)        required by HOGP; always reports 100 %.
  *  Device Information (0x180A)     manufacturer name.
  *
@@ -55,19 +57,25 @@ internal object HidGattProfile {
 
     val MANUFACTURER_NAME = "Phone Mouse & Keyboard".toByteArray(Charsets.UTF_8)
 
-    /** Report Reference descriptor "type" value for input reports. */
+    /** Report Reference descriptor "type" values. */
     private const val REPORT_TYPE_INPUT: Byte = 1
+    private const val REPORT_TYPE_FEATURE: Byte = 3
 
     /** The input report IDs exposed as Report characteristics, in [HidDescriptor] order. */
     val INPUT_REPORT_IDS = listOf(HidDescriptor.KEYBOARD_REPORT_ID, HidDescriptor.MOUSE_REPORT_ID)
 
     // ---- Building the services ----
 
-    /**
-     * Builds the HID service. Returns the service and its Report characteristics by report ID,
-     * which are needed later to send input.
-     */
-    fun buildHidService(): Pair<BluetoothGattService, Map<Int, BluetoothGattCharacteristic>> {
+    /** The HID service and the characteristics needed later to exchange reports. */
+    class HidService(
+        val service: BluetoothGattService,
+        /** Input Report characteristics by report ID, used to send input. */
+        val inputReports: Map<Int, BluetoothGattCharacteristic>,
+        /** The mouse feature report, which the computer reads and writes. */
+        val mouseFeatureReport: BluetoothGattCharacteristic,
+    )
+
+    fun buildHidService(): HidService {
         val service = BluetoothGattService(SERVICE_HID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
 
         service.addCharacteristic(readOnly(CHARACTERISTIC_HID_INFORMATION))
@@ -87,10 +95,13 @@ internal object HidGattProfile {
             ),
         )
 
-        val reports = INPUT_REPORT_IDS.associateWith { buildInputReport() }
-        reports.values.forEach(service::addCharacteristic)
+        val inputReports = INPUT_REPORT_IDS.associateWith { buildInputReport() }
+        inputReports.values.forEach(service::addCharacteristic)
 
-        return service to reports
+        val mouseFeatureReport = buildFeatureReport()
+        service.addCharacteristic(mouseFeatureReport)
+
+        return HidService(service, inputReports, mouseFeatureReport)
     }
 
     fun buildBatteryService(): BluetoothGattService {
@@ -115,7 +126,12 @@ internal object HidGattProfile {
     }
 
     /** The Report Reference value for an input report: its ID, then "input". */
-    fun reportReference(reportId: Int): ByteArray = byteArrayOf(reportId.toByte(), REPORT_TYPE_INPUT)
+    fun inputReportReference(reportId: Int): ByteArray =
+        byteArrayOf(reportId.toByte(), REPORT_TYPE_INPUT)
+
+    /** The Report Reference value for the mouse feature report. */
+    val MOUSE_FEATURE_REPORT_REFERENCE =
+        byteArrayOf(HidDescriptor.MOUSE_REPORT_ID.toByte(), REPORT_TYPE_FEATURE)
 
     private fun buildInputReport(): BluetoothGattCharacteristic {
         val report = BluetoothGattCharacteristic(
@@ -124,6 +140,18 @@ internal object HidGattProfile {
             PERMISSION_READ_ENCRYPTED,
         )
         report.addDescriptor(clientConfiguration())
+        report.addDescriptor(
+            BluetoothGattDescriptor(DESCRIPTOR_REPORT_REFERENCE, BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED),
+        )
+        return report
+    }
+
+    private fun buildFeatureReport(): BluetoothGattCharacteristic {
+        val report = BluetoothGattCharacteristic(
+            CHARACTERISTIC_REPORT,
+            PROPERTY_READ or PROPERTY_WRITE,
+            PERMISSION_READ_ENCRYPTED or PERMISSION_WRITE_ENCRYPTED,
+        )
         report.addDescriptor(
             BluetoothGattDescriptor(DESCRIPTOR_REPORT_REFERENCE, BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED),
         )

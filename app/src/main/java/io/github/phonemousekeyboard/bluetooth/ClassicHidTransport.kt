@@ -24,7 +24,10 @@ import kotlinx.coroutines.flow.asStateFlow
  * Some manufacturers disable this profile; [BleHidTransport] is the alternative then.
  */
 @SuppressLint("MissingPermission")
-class ClassicHidTransport(context: Context) : HidTransport {
+class ClassicHidTransport(
+    context: Context,
+    private val scrollResolution: ScrollResolutionMemory,
+) : HidTransport {
 
     private val appContext = context.applicationContext
     private val adapter: BluetoothAdapter? =
@@ -252,6 +255,9 @@ class ClassicHidTransport(context: Context) : HidTransport {
         device.sendReport(host, reportId, data)
     }
 
+    override val wheelUnitsPerNotch: Int
+        get() = scrollResolution.wheelUnitsPerNotch(connectedHost?.address)
+
     // ------------------------------------------------------------------------------------------
     // Internals
     // ------------------------------------------------------------------------------------------
@@ -319,8 +325,12 @@ class ClassicHidTransport(context: Context) : HidTransport {
 
         override fun onGetReport(device: BluetoothDevice, type: Byte, id: Byte, bufferSize: Int) {
             val hid = hidDevice ?: return
-            // "Nothing pressed" is always a valid answer for an input device's current state.
-            val report = HidDescriptor.emptyReport(id.toInt())
+            val report = if (type == BluetoothHidDevice.REPORT_TYPE_FEATURE) {
+                mouseFeatureReport(device, id.toInt())
+            } else {
+                // "Nothing pressed" is always a valid answer for an input device's state.
+                HidDescriptor.emptyReport(id.toInt())
+            }
             if (report != null) {
                 hid.replyReport(device, type, id, report)
             } else {
@@ -329,7 +339,13 @@ class ClassicHidTransport(context: Context) : HidTransport {
         }
 
         override fun onSetReport(device: BluetoothDevice, type: Byte, id: Byte, data: ByteArray) {
-            // Typically keyboard LED state (Caps Lock etc.). Nothing to do but acknowledge it.
+            val isMouseFeature = type == BluetoothHidDevice.REPORT_TYPE_FEATURE &&
+                id.toInt() == HidDescriptor.MOUSE_REPORT_ID
+            if (isMouseFeature) {
+                // The computer is switching high-resolution scrolling on or off.
+                scrollResolution.set(device.address, HidDescriptor.isHighResolutionScrollRequested(data))
+            }
+            // Anything else (e.g. keyboard LEDs) needs nothing but an acknowledgement.
             hidDevice?.reportError(device, BluetoothHidDevice.ERROR_RSP_SUCCESS)
         }
 
@@ -337,6 +353,14 @@ class ClassicHidTransport(context: Context) : HidTransport {
             Log.d(TAG, "Host set protocol mode to $protocol")
         }
     }
+
+    /** The mouse feature report for [device], or null if [reportId] has no feature report. */
+    private fun mouseFeatureReport(device: BluetoothDevice, reportId: Int): ByteArray? =
+        if (reportId == HidDescriptor.MOUSE_REPORT_ID) {
+            HidDescriptor.mouseFeatureReport(scrollResolution.isHighResolution(device.address))
+        } else {
+            null
+        }
 
     private fun onDisconnected(device: BluetoothDevice) {
         val wasConnecting = pendingHost == device

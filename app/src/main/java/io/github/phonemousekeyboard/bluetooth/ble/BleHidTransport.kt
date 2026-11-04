@@ -29,6 +29,7 @@ import androidx.core.content.IntentCompat
 import io.github.phonemousekeyboard.bluetooth.ConnectionState
 import io.github.phonemousekeyboard.bluetooth.HidDescriptor
 import io.github.phonemousekeyboard.bluetooth.HidTransport
+import io.github.phonemousekeyboard.bluetooth.ScrollResolutionMemory
 import io.github.phonemousekeyboard.bluetooth.displayName
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,7 +52,10 @@ import kotlinx.coroutines.flow.asStateFlow
  * thread before touching any state, so all fields here are only used from the main thread.
  */
 @SuppressLint("MissingPermission")
-class BleHidTransport(context: Context) : HidTransport {
+class BleHidTransport(
+    context: Context,
+    private val scrollResolution: ScrollResolutionMemory,
+) : HidTransport {
 
     private val appContext = context.applicationContext
     private val bluetoothManager = appContext.getSystemService(BluetoothManager::class.java)
@@ -62,6 +66,7 @@ class BleHidTransport(context: Context) : HidTransport {
     private var gattServer: BluetoothGattServer? = null
     private val servicesToAdd = ArrayDeque<BluetoothGattService>()
     private var reportCharacteristics: Map<Int, BluetoothGattCharacteristic> = emptyMap()
+    private var mouseFeatureCharacteristic: BluetoothGattCharacteristic? = null
     private var isBondReceiverRegistered = false
 
     private var isAdvertising = false
@@ -123,10 +128,11 @@ class BleHidTransport(context: Context) : HidTransport {
         gattServer = server
         registerBondReceiver()
 
-        val (hidService, reports) = HidGattProfile.buildHidService()
-        reportCharacteristics = reports
+        val hid = HidGattProfile.buildHidService()
+        reportCharacteristics = hid.inputReports
+        mouseFeatureCharacteristic = hid.mouseFeatureReport
         servicesToAdd.clear()
-        servicesToAdd += hidService
+        servicesToAdd += hid.service
         servicesToAdd += HidGattProfile.buildBatteryService()
         servicesToAdd += HidGattProfile.buildDeviceInformationService()
         addNextService()
@@ -159,6 +165,7 @@ class BleHidTransport(context: Context) : HidTransport {
         gattServer = null
         servicesToAdd.clear()
         reportCharacteristics = emptyMap()
+        mouseFeatureCharacteristic = null
         isAdvertising = false
         host = null
         hostCandidates.clear()
@@ -434,6 +441,9 @@ class BleHidTransport(context: Context) : HidTransport {
     // Input
     // ------------------------------------------------------------------------------------------
 
+    override val wheelUnitsPerNotch: Int
+        get() = scrollResolution.wheelUnitsPerNotch(host?.address)
+
     override fun sendReport(reportId: Int, data: ByteArray) {
         if (_state.value !is ConnectionState.Connected) return
         if (reportId !in reportCharacteristics) return
@@ -498,6 +508,14 @@ class BleHidTransport(context: Context) : HidTransport {
     /** Notification on/off switches written by the computer, by descriptor. */
     private val clientConfigurations = mutableMapOf<BluetoothGattDescriptor, ByteArray>()
 
+    private fun valueOf(device: BluetoothDevice, characteristic: BluetoothGattCharacteristic): ByteArray? =
+        when {
+            characteristic == mouseFeatureCharacteristic -> HidDescriptor.mouseFeatureReport(
+                scrollResolution.isHighResolution(device.address),
+            )
+            else -> valueOf(characteristic)
+        }
+
     private fun valueOf(characteristic: BluetoothGattCharacteristic): ByteArray? =
         when (characteristic.uuid) {
             HidGattProfile.CHARACTERISTIC_HID_INFORMATION -> HidGattProfile.HID_INFORMATION
@@ -512,8 +530,10 @@ class BleHidTransport(context: Context) : HidTransport {
 
     private fun valueOf(descriptor: BluetoothGattDescriptor): ByteArray? =
         when (descriptor.uuid) {
-            HidGattProfile.DESCRIPTOR_REPORT_REFERENCE ->
-                reportIdOf(descriptor.characteristic)?.let(HidGattProfile::reportReference)
+            HidGattProfile.DESCRIPTOR_REPORT_REFERENCE -> when (descriptor.characteristic) {
+                mouseFeatureCharacteristic -> HidGattProfile.MOUSE_FEATURE_REPORT_REFERENCE
+                else -> reportIdOf(descriptor.characteristic)?.let(HidGattProfile::inputReportReference)
+            }
             HidGattProfile.DESCRIPTOR_CLIENT_CONFIGURATION ->
                 clientConfigurations[descriptor]
                     ?: BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE
@@ -575,7 +595,7 @@ class BleHidTransport(context: Context) : HidTransport {
         ) {
             mainHandler.post {
                 onHostActivity(device)
-                respondToRead(device, requestId, offset, valueOf(characteristic))
+                respondToRead(device, requestId, offset, valueOf(device, characteristic))
             }
         }
 
@@ -600,9 +620,16 @@ class BleHidTransport(context: Context) : HidTransport {
             offset: Int,
             value: ByteArray?,
         ) {
-            // Protocol Mode and HID Control Point (suspend/resume) need no action here.
             mainHandler.post {
                 onHostActivity(device)
+                if (characteristic == mouseFeatureCharacteristic && value != null) {
+                    // The computer is switching high-resolution scrolling on or off.
+                    scrollResolution.set(
+                        device.address,
+                        HidDescriptor.isHighResolutionScrollRequested(value),
+                    )
+                }
+                // Protocol Mode and HID Control Point (suspend/resume) need no action.
                 respondToWrite(device, requestId, responseNeeded)
             }
         }

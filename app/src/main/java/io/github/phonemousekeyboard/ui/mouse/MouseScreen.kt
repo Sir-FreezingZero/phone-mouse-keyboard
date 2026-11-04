@@ -34,9 +34,6 @@ import androidx.compose.ui.unit.dp
 import io.github.phonemousekeyboard.input.MouseButton
 import kotlin.math.hypot
 
-/** Vertical finger travel, in phone pixels, that equals one scroll-wheel notch at speed 1×. */
-private const val PIXELS_PER_SCROLL_NOTCH = 40f
-
 /**
  * Pointer acceleration: finger movement per touch event (in phone pixels) at which the pointer
  * moves twice as far as normal, and the most it is ever multiplied by.
@@ -65,7 +62,7 @@ private val UnitShape = RoundedCornerShape(8.dp)
 fun MouseScreen(
     settings: MouseSettings,
     onMove: (dx: Int, dy: Int) -> Unit,
-    onScroll: (notches: Int) -> Unit,
+    onScroll: (fingerDeltaY: Float) -> Unit,
     onClick: (MouseButton) -> Unit,
     onButtonPress: (MouseButton) -> Unit,
     onButtonRelease: (MouseButton) -> Unit,
@@ -134,7 +131,7 @@ fun MouseScreen(
 private fun Trackpad(
     settings: MouseSettings,
     onMove: (dx: Int, dy: Int) -> Unit,
-    onScroll: (notches: Int) -> Unit,
+    onScroll: (fingerDeltaY: Float) -> Unit,
     onClick: (MouseButton) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -146,7 +143,7 @@ private fun Trackpad(
 
     val xAccumulator = remember { FractionalAccumulator() }
     val yAccumulator = remember { FractionalAccumulator() }
-    val scrollAccumulator = remember { FractionalAccumulator() }
+    val orbs = rememberTouchOrbState()
 
     Box(
         modifier = modifier.trackpadGestures(
@@ -156,15 +153,8 @@ private fun Trackpad(
                 val stepY = yAccumulator.add(dy * scale)
                 if (stepX != 0 || stepY != 0) currentOnMove(stepX, stepY)
             },
-            onScroll = { dy ->
-                // Natural scrolling: dragging fingers up moves the content up, which is a
-                // negative (downward) wheel movement. Classic scrolling is the opposite.
-                val direction = if (currentSettings.naturalScrolling) 1f else -1f
-                val notches = scrollAccumulator.add(
-                    direction * dy * currentSettings.scrollSpeed / PIXELS_PER_SCROLL_NOTCH,
-                )
-                if (notches != 0) currentOnScroll(notches)
-            },
+            // Speed and direction are applied where the scroll is sent, from the saved settings.
+            onScroll = { dy -> currentOnScroll(dy) },
             onTap = { fingerCount ->
                 when {
                     fingerCount >= 2 && currentSettings.twoFingerTapRightClick ->
@@ -173,9 +163,13 @@ private fun Trackpad(
                         currentOnClick(MouseButton.LEFT)
                 }
             },
+            onTouchesChanged = orbs::update,
         ),
         contentAlignment = Alignment.Center,
     ) {
+        if (settings.showTouchOrbs) {
+            TouchOrbs(state = orbs)
+        }
         Text(
             text = trackpadHint(settings),
             style = MaterialTheme.typography.bodySmall,

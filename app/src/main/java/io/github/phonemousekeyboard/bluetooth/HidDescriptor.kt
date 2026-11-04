@@ -16,6 +16,13 @@ package io.github.phonemousekeyboard.bluetooth
  *      byte 2     Y movement, signed (-127..127)
  *      byte 3     vertical wheel, signed (-127..127)
  *
+ *  - Feature report [MOUSE_REPORT_ID]: the wheel's "Resolution Multiplier"
+ *      byte 0     bits 0-1: 0 = one wheel unit per notch, 1 = [WHEEL_UNITS_PER_NOTCH] units
+ *
+ * The Resolution Multiplier is how mice offer smooth, high-resolution scrolling. A computer
+ * that supports it (Windows Vista and later, Linux, ...) switches it on by writing 1 to the
+ * feature report; from then on each wheel unit is a fraction of a notch.
+ *
  * Reference: USB HID Usage Tables, https://usb.org/document-library/hid-usage-tables-15
  */
 object HidDescriptor {
@@ -25,6 +32,9 @@ object HidDescriptor {
 
     const val KEYBOARD_REPORT_SIZE = 8
     const val MOUSE_REPORT_SIZE = 4
+
+    /** Wheel units per notch once the computer has enabled high-resolution scrolling. */
+    const val WHEEL_UNITS_PER_NOTCH = 16
 
     val REPORT_MAP: ByteArray = bytesOf(
         // ---- Keyboard ----
@@ -74,12 +84,31 @@ object HidDescriptor {
         0x05, 0x01,                     //     Usage Page (Generic Desktop)
         0x09, 0x30,                     //     Usage (X)
         0x09, 0x31,                     //     Usage (Y)
-        0x09, 0x38,                     //     Usage (Wheel)
         0x15, 0x81,                     //     Logical Minimum (-127)
         0x25, 0x7F,                     //     Logical Maximum (127)
         0x75, 0x08,                     //     Report Size (8 bits)
-        0x95, 0x03,                     //     Report Count (3)
-        0x81, 0x06,                     //     Input (Data, Variable, Relative) — X, Y, wheel
+        0x95, 0x02,                     //     Report Count (2)
+        0x81, 0x06,                     //     Input (Data, Variable, Relative) — X, Y
+        0xA1, 0x02,                     //     Collection (Logical) — wheel + its multiplier
+        0x09, 0x48,                     //       Usage (Resolution Multiplier)
+        0x15, 0x00,                     //       Logical Minimum (0)
+        0x25, 0x01,                     //       Logical Maximum (1)
+        0x35, 0x01,                     //       Physical Minimum (1)
+        0x45, WHEEL_UNITS_PER_NOTCH,    //       Physical Maximum
+        0x75, 0x02,                     //       Report Size (2 bits)
+        0x95, 0x01,                     //       Report Count (1)
+        0xB1, 0x02,                     //       Feature (Data, Variable, Absolute)
+        0x35, 0x00,                     //       Physical Minimum (0) — reset
+        0x45, 0x00,                     //       Physical Maximum (0) — reset
+        0x75, 0x06,                     //       Report Size (6 bits)
+        0xB1, 0x03,                     //       Feature (Constant) — padding
+        0x09, 0x38,                     //       Usage (Wheel)
+        0x15, 0x81,                     //       Logical Minimum (-127)
+        0x25, 0x7F,                     //       Logical Maximum (127)
+        0x75, 0x08,                     //       Report Size (8 bits)
+        0x95, 0x01,                     //       Report Count (1)
+        0x81, 0x06,                     //       Input (Data, Variable, Relative) — wheel
+        0xC0,                           //     End Collection
         0xC0,                           //   End Collection
         0xC0,                           // End Collection
     )
@@ -90,6 +119,14 @@ object HidDescriptor {
         MOUSE_REPORT_ID -> ByteArray(MOUSE_REPORT_SIZE)
         else -> null
     }
+
+    /** Whether a feature report written by the computer switches high-resolution scrolling on. */
+    fun isHighResolutionScrollRequested(featureReport: ByteArray): Boolean =
+        featureReport.isNotEmpty() && (featureReport[0].toInt() and 0b11) == 1
+
+    /** The mouse feature report as stored: high-resolution scrolling on or off. */
+    fun mouseFeatureReport(isHighResolution: Boolean): ByteArray =
+        byteArrayOf(if (isHighResolution) 1 else 0)
 
     /** Lets the descriptor above be written as readable hex values instead of `.toByte()` calls. */
     private fun bytesOf(vararg values: Int): ByteArray =

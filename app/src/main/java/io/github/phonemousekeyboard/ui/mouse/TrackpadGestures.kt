@@ -18,6 +18,9 @@ private const val TAP_TIMEOUT_MILLIS = 250L
  *  - one finger tap   → [onTap] with `1`
  *  - two finger tap   → [onTap] with `2`
  *
+ * [onTouchesChanged] receives every finger's position, keyed by pointer ID, whenever fingers
+ * move, land or lift; an empty map once all have lifted.
+ *
  * Once a second finger touches down, the gesture stays a scroll/two-finger gesture until all
  * fingers lift, so the pointer doesn't jump when fingers are lifted one at a time.
  */
@@ -25,6 +28,7 @@ fun Modifier.trackpadGestures(
     onMove: (dx: Float, dy: Float) -> Unit,
     onScroll: (dy: Float) -> Unit,
     onTap: (fingerCount: Int) -> Unit,
+    onTouchesChanged: (touches: Map<Long, Offset>) -> Unit = {},
 ): Modifier = pointerInput(Unit) {
     awaitEachGesture {
         val firstDown = awaitFirstDown(requireUnconsumed = false)
@@ -37,6 +41,7 @@ fun Modifier.trackpadGestures(
             val event = awaitPointerEvent()
             val fingersDown = event.changes.filter { it.pressed }
             maxFingers = maxOf(maxFingers, fingersDown.size)
+            onTouchesChanged(fingersDown.associate { it.id.value to it.position })
 
             if (fingersDown.isNotEmpty()) {
                 val averageMovement = fingersDown

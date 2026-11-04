@@ -16,6 +16,8 @@ data class MouseSettings(
     val scrollSpeed: Float = 1.0f,
     /** Content follows the fingers, as on phones and Mac trackpads. Off = classic wheel direction. */
     val naturalScrolling: Boolean = true,
+    /** Scroll in small steps instead of whole wheel notches, where the computer supports it. */
+    val smoothScrolling: Boolean = true,
     /** A quick one-finger tap on the trackpad left-clicks. */
     val tapToClick: Boolean = true,
     /** A quick two-finger tap on the trackpad right-clicks. */
@@ -24,9 +26,25 @@ data class MouseSettings(
     val showButtons: Boolean = true,
     /** A short vibration on every click and button press. */
     val vibrateOnClick: Boolean = true,
+    /** Glowing orbs under the fingers while they touch the trackpad. */
+    val showTouchOrbs: Boolean = true,
 ) {
+    /**
+     * How many wheel notches a two-finger drag of [fingerDeltaY] phone pixels scrolls, taking
+     * scroll speed and direction into account. Positive scrolls up.
+     */
+    fun scrollNotchesFor(fingerDeltaY: Float): Float {
+        // Natural: dragging up (negative y) moves the content up, i.e. scrolls down
+        // (negative). Classic: the opposite, like turning a wheel.
+        val direction = if (naturalScrolling) 1f else -1f
+        return direction * fingerDeltaY * scrollSpeed / PIXELS_PER_NOTCH
+    }
+
     companion object {
         val SPEED_RANGE = 0.25f..3f
+
+        /** Vertical finger travel, in phone pixels, that scrolls one notch at speed 1x. */
+        private const val PIXELS_PER_NOTCH = 40f
     }
 }
 
@@ -55,10 +73,12 @@ class MouseSettingsStore(context: Context) {
                 pointerAcceleration = getBoolean(KEY_POINTER_ACCELERATION, defaults.pointerAcceleration),
                 scrollSpeed = getFloat(KEY_SCROLL_SPEED, defaults.scrollSpeed),
                 naturalScrolling = getBoolean(KEY_NATURAL_SCROLLING, defaults.naturalScrolling),
+                smoothScrolling = getBoolean(KEY_SMOOTH_SCROLLING, defaults.smoothScrolling),
                 tapToClick = getBoolean(KEY_TAP_TO_CLICK, defaults.tapToClick),
                 twoFingerTapRightClick = getBoolean(KEY_TWO_FINGER_TAP, defaults.twoFingerTapRightClick),
                 showButtons = getBoolean(KEY_SHOW_BUTTONS, defaults.showButtons),
                 vibrateOnClick = getBoolean(KEY_VIBRATE, defaults.vibrateOnClick),
+                showTouchOrbs = getBoolean(KEY_TOUCH_ORBS, defaults.showTouchOrbs),
             )
         }
     }
@@ -69,10 +89,12 @@ class MouseSettingsStore(context: Context) {
             putBoolean(KEY_POINTER_ACCELERATION, settings.pointerAcceleration)
             putFloat(KEY_SCROLL_SPEED, settings.scrollSpeed)
             putBoolean(KEY_NATURAL_SCROLLING, settings.naturalScrolling)
+            putBoolean(KEY_SMOOTH_SCROLLING, settings.smoothScrolling)
             putBoolean(KEY_TAP_TO_CLICK, settings.tapToClick)
             putBoolean(KEY_TWO_FINGER_TAP, settings.twoFingerTapRightClick)
             putBoolean(KEY_SHOW_BUTTONS, settings.showButtons)
             putBoolean(KEY_VIBRATE, settings.vibrateOnClick)
+            putBoolean(KEY_TOUCH_ORBS, settings.showTouchOrbs)
         }
     }
 
@@ -86,5 +108,7 @@ class MouseSettingsStore(context: Context) {
         const val KEY_TWO_FINGER_TAP = "two_finger_tap_right_click"
         const val KEY_SHOW_BUTTONS = "show_buttons"
         const val KEY_VIBRATE = "vibrate_on_click"
+        const val KEY_SMOOTH_SCROLLING = "smooth_scrolling"
+        const val KEY_TOUCH_ORBS = "show_touch_orbs"
     }
 }

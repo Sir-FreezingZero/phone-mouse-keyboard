@@ -52,6 +52,12 @@ interface HidTransport {
      * Reports are silently dropped while no computer is connected.
      */
     fun sendReport(reportId: Int, data: ByteArray)
+
+    /**
+     * Wheel units the connected computer expects per scroll notch: 1, or
+     * [HidDescriptor.WHEEL_UNITS_PER_NOTCH] once it has switched on high-resolution scrolling.
+     */
+    val wheelUnitsPerNotch: Int
 }
 
 /** A device's friendly name, falling back to its hardware address. */

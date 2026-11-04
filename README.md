@@ -17,14 +17,15 @@ green when connected, and blue with ripples running along it while input is bein
   - tap to left-click, two-finger tap to right-click
   - two-finger drag scrolls
   - hold a button while dragging on the trackpad to click-and-drag
-  - **⋮ → Mouse settings:** pointer speed and acceleration, scroll speed and direction
-    (natural or classic), tap to click, two-finger tap to right-click, show/hide the buttons,
-    vibrate on click. Settings are saved automatically.
+  - **⋮ → Mouse settings:** pointer speed and acceleration, scroll speed, direction (natural or
+    classic) and smooth scrolling, tap to click, two-finger tap to right-click, show/hide the
+    buttons, vibrate on click, glowing touch orbs under your fingers. Settings are saved
+    automatically.
 - **Keyboard page:** a text box. Whatever you type with the phone's keyboard (including
   autocorrect, swipe typing and backspace) is replayed on the computer.
   - **⋮ → Keyboard settings:** a delay per character and a random extra delay, so long pasted
-    text is typed out gradually (with a **Stop** button while it sends); phone autocorrect on or
-    off; clear the box after Enter.
+    text is typed out gradually (with a **Stop** button while it sends); typed text fading out of
+    the box after a set time; phone autocorrect on or off; clear the box after Enter.
 - **Menu → Connect → Bluetooth:** one page for everything connection-related: permissions,
   connection type, pairing instructions, and connecting to or disconnecting from a computer.
 
@@ -112,6 +113,9 @@ app/src/main/java/io/github/phonemousekeyboard/
 
 ## Troubleshooting
 
+**Scrolling isn't smooth after updating the app.** Smooth scrolling needs the computer to
+learn about it during pairing. Remove the phone on the computer and pair again once.
+
 **The computer only sees a phone, not a keyboard/mouse.** The phone presents itself as a
 keyboard/mouse only while *Keyboard & mouse service* says **Ready**. If the computer paired
 before that, it remembered a plain phone. Remove the phone on the computer, forget the computer
@@ -132,6 +136,8 @@ Energy, or too many apps are already doing so. Close other Bluetooth apps and ta
 - **US keyboard layout only.** HID keyboards send key *positions*, and the computer turns them
   into characters with its own layout setting. On a non-US layout, some symbols will come out
   differently. Other layouts can be added next to `UsKeyboardLayout`.
+- **Backspace always reaches the computer**, even when the text box is empty or its text has
+  faded away: an invisible character at the start of the box catches it.
 - **Type at the end of the text box.** Edits are mirrored on the assumption that the cursor is at
   the end. Moving the cursor into the middle of the text will not move the computer's cursor.
 - Characters with no key on a US keyboard (e.g. emoji) are skipped.

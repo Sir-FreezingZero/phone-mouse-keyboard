@@ -136,7 +136,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun moveMouse(dx: Int, dy: Int) = input.moveMouse(dx, dy)
 
-    fun scroll(notches: Int) = input.moveMouse(dx = 0, dy = 0, wheel = notches)
+    /** Scrolls for a two-finger drag of [fingerDeltaY] phone pixels on the trackpad. */
+    fun scroll(fingerDeltaY: Float) {
+        val settings = mouseSettings.value
+        input.scroll(settings.scrollNotchesFor(fingerDeltaY), smooth = settings.smoothScrolling)
+    }
 
     fun pressMouseButton(button: MouseButton) = input.pressMouseButton(button)
 
@@ -167,6 +171,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             UsKeyboardLayout.keyStrokeFor(char)?.let(typingQueue::add)
         }
     }
+
+    /** Sends a single Backspace, e.g. when Backspace is pressed in an empty text box. */
+    fun pressBackspace() = typingQueue.add(SpecialKeys.BACKSPACE)
 
     /** Drops any typing that hasn't been sent yet. */
     fun stopTyping() = typingQueue.cancel()

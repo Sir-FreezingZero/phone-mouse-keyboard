@@ -67,6 +67,7 @@ fun MouseSettingsSheet(
             PointerGroup(settings, onChange)
             ScrollingGroup(settings, onChange)
             ClickingGroup(settings, onChange)
+            AppearanceGroup(settings, onChange)
         }
     }
 }
@@ -110,9 +111,18 @@ private fun ScrollingGroup(
         GroupDivider()
         SwitchRow(
             title = "Natural scrolling",
-            detail = "Content follows your fingers, like on a phone",
+            detail = "Content follows your fingers, like on a phone. Off: drag down to " +
+                "scroll down, like a mouse wheel",
             checked = settings.naturalScrolling,
             onCheckedChange = { enabled -> onChange { it.copy(naturalScrolling = enabled) } },
+        )
+        GroupDivider()
+        SwitchRow(
+            title = "Smooth scrolling",
+            detail = "Scroll in fine steps instead of whole wheel notches. If it has no " +
+                "effect, remove and re-pair the phone on the computer once",
+            checked = settings.smoothScrolling,
+            onCheckedChange = { enabled -> onChange { it.copy(smoothScrolling = enabled) } },
         )
     }
 }
@@ -146,6 +156,21 @@ private fun ClickingGroup(
             title = "Vibrate on click",
             checked = settings.vibrateOnClick,
             onCheckedChange = { enabled -> onChange { it.copy(vibrateOnClick = enabled) } },
+        )
+    }
+}
+
+@Composable
+private fun AppearanceGroup(
+    settings: MouseSettings,
+    onChange: ((MouseSettings) -> MouseSettings) -> Unit,
+) {
+    SettingsGroup(title = "Appearance") {
+        SwitchRow(
+            title = "Touch orbs",
+            detail = "Glowing orbs under your fingers on the trackpad",
+            checked = settings.showTouchOrbs,
+            onCheckedChange = { enabled -> onChange { it.copy(showTouchOrbs = enabled) } },
         )
     }
 }

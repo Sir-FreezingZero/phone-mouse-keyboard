@@ -142,6 +142,7 @@ fun MainScreen(
                     settings = keyboardSettings,
                     pendingCharacters = pendingKeystrokes,
                     onTextChange = viewModel::sendTextChange,
+                    onBackspace = viewModel::pressBackspace,
                     onStopSending = viewModel::stopTyping,
                     // Keep the text box above the on-screen keyboard.
                     modifier = contentModifier.imePadding(),
