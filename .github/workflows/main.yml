@@ -1,10 +1,9 @@
 
 name: Build and Release Android APK
 
+# Builds only when started by hand: GitHub → Actions → "Build and Release Android APK" →
+# "Run workflow". Pushing to main no longer builds automatically.
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
