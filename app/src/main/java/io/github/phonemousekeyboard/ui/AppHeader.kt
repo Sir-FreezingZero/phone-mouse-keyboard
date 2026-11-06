@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
@@ -30,7 +31,7 @@ import androidx.compose.ui.unit.dp
 /**
  * The bar across the top of the app:
  *
- *   [menu]            Page title             [⋮]
+ *   [menu]            Page title             [⋮]      ([←] instead of [menu] on menu pages)
  *   ──────────────═══════════──────────────        status line
  *
  * On main pages the title can be swiped to move between them ([TitleSwitcher]); other pages
@@ -43,6 +44,7 @@ fun AppHeader(
     isSendingInput: Boolean,
     onScreenSelected: (Screen) -> Unit,
     onMenuClick: () -> Unit,
+    onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     overflowItems: OverflowItems? = null,
 ) {
@@ -54,8 +56,18 @@ fun AppHeader(
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onMenuClick) {
-                Icon(imageVector = Icons.Default.Menu, contentDescription = "Open menu")
+            // Main pages open the menu from here; other pages (e.g. Bluetooth) go back instead.
+            if (currentScreen.isMainPage) {
+                IconButton(onClick = onMenuClick) {
+                    Icon(imageVector = Icons.Default.Menu, contentDescription = "Open menu")
+                }
+            } else {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                    )
+                }
             }
 
             // Equal-width buttons on both sides keep this area, and the title, centred.

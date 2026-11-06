@@ -17,6 +17,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.phonemousekeyboard.MainViewModel
 import io.github.phonemousekeyboard.PermissionStatus
@@ -70,6 +71,22 @@ fun MainScreen(
 
     BackHandler(enabled = !currentScreen.isMainPage) { currentScreen = lastMainPage }
 
+    // Every menu choice also closes the menu.
+    val uriHandler = LocalUriHandler.current
+    fun closeMenuAnd(action: () -> Unit) {
+        action()
+        scope.launch { drawerState.close() }
+    }
+    val menuActions = MenuActions(
+        onNavigate = { screen -> closeMenuAnd { navigateTo(screen) } },
+        onOpenMouseSettings = { closeMenuAnd { isMouseSettingsOpen = true } },
+        onOpenKeyboardSettings = { closeMenuAnd { isKeyboardSettingsOpen = true } },
+        onOpenSourceCode = {
+            // Fails quietly if the phone has no browser.
+            closeMenuAnd { runCatching { uriHandler.openUri(SOURCE_CODE_URL) } }
+        },
+    )
+
     val bluetoothActions = remember(viewModel, systemActions) {
         BluetoothActions(
             onGrantPermissions = systemActions.requestPermissions,
@@ -86,10 +103,8 @@ fun MainScreen(
         drawerContent = {
             AppMenuContent(
                 currentScreen = currentScreen,
-                onNavigate = { screen ->
-                    navigateTo(screen)
-                    scope.launch { drawerState.close() }
-                },
+                connectionState = connectionState,
+                actions = menuActions,
             )
         },
     ) {
@@ -100,6 +115,7 @@ fun MainScreen(
                     isConnected = connectionState is ConnectionState.Connected,
                     isSendingInput = isSendingInput,
                     onScreenSelected = navigateTo,
+                    onBackClick = { currentScreen = lastMainPage },
                     onMenuClick = { scope.launch { drawerState.open() } },
                     overflowItems = when (currentScreen) {
                         Screen.MOUSE -> settingsOverflowItems(

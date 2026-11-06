@@ -102,7 +102,8 @@ app/src/main/java/io/github/phonemousekeyboard/
     ├── AppHeader.kt              Menu button, title, ⋮ menu
     ├── TitleSwitcher.kt          Swipeable title with faded neighbouring page names
     ├── StatusLine.kt             Glowing header line: connection and input activity
-    ├── AppMenu.kt                Slide-out menu
+    ├── AppMenu.kt                Slide-out menu: pages, settings, about
+    ├── icons/                    Line icons not in the Material set (mouse, keyboard, …)
     ├── mouse/                    Trackpad, gestures, mouse buttons, mouse settings
     ├── keyboard/                 Text box page, keyboard settings
     ├── bluetooth/                Bluetooth settings page
