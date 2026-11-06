@@ -18,6 +18,8 @@ import io.github.phonemousekeyboard.input.SpecialKeys
 import io.github.phonemousekeyboard.input.TextDiff
 import io.github.phonemousekeyboard.input.TypingQueue
 import io.github.phonemousekeyboard.input.UsKeyboardLayout
+import io.github.phonemousekeyboard.ui.airmouse.AirMouseSettings
+import io.github.phonemousekeyboard.ui.airmouse.AirMouseSettingsStore
 import io.github.phonemousekeyboard.ui.bluetooth.BluetoothUiState
 import io.github.phonemousekeyboard.ui.bluetooth.DeviceItem
 import io.github.phonemousekeyboard.ui.bluetooth.DeviceStatus
@@ -47,6 +49,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val inputActivity = InputActivity(viewModelScope)
     private val deviceManager = BluetoothDeviceManager(application)
     private val mouseSettingsStore = MouseSettingsStore(application)
+    private val airMouseSettingsStore = AirMouseSettingsStore(application)
     private val keyboardSettingsStore = KeyboardSettingsStore(application)
 
     private val typingQueue = TypingQueue(
@@ -119,6 +122,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateMouseSettings(change: (MouseSettings) -> MouseSettings) = mouseSettingsStore.update(change)
 
     fun resetMouseSettings() = mouseSettingsStore.reset()
+
+    // ---- Air mouse ----
+    // Movement and clicks use the same functions as the trackpad (moveMouse, pressMouseButton…).
+
+    val airMouseSettings: StateFlow<AirMouseSettings> = airMouseSettingsStore.settings
+
+    fun updateAirMouseSettings(change: (AirMouseSettings) -> AirMouseSettings) =
+        airMouseSettingsStore.update(change)
+
+    fun resetAirMouseSettings() = airMouseSettingsStore.reset()
 
     fun moveMouse(dx: Int, dy: Int) = input.moveMouse(dx, dy)
 

@@ -6,7 +6,7 @@ being controlled: the phone shows up as an ordinary Bluetooth keyboard/mouse.
 
 ## Features
 
-The app has two main pages, Mouse and Keyboard. Swipe the title at the top to move between them;
+The app has three main pages: Mouse, Keyboard and Air mouse. Swipe the title at the top to move between them;
 the names of the other pages show faintly either side of the current one.
 
 The line under the header shows the connection at a glance: grey when nothing is connected,
@@ -26,6 +26,13 @@ green when connected, and blue with ripples running along it while input is bein
   - **⋮ → Keyboard settings:** a delay per character and a random extra delay, so long pasted
     text is typed out gradually (with a **Stop** button while it sends); typed text fading out of
     the box after a set time; phone autocorrect on or off; clear the box after Enter.
+- **Air mouse page:** point the top of the phone at the screen and turn it left/right or tilt
+  it up/down to move the pointer, like a TV remote. Uses the gyroscope, plus gravity to know
+  which way is up, so it works with the phone held flat or upright. The page shows a small
+  picture of a screen with the pointer moving on it, mirroring what's being sent, plus live
+  readings; Left/Right buttons sit underneath. Pause at any time.
+  - **⋮ → Air mouse settings:** speed, steadiness (ignores hand tremor), smoothing, move only
+    while touching, invert either direction.
 - **Menu → Connect → Bluetooth:** one page for everything connection-related: permissions,
   pairing instructions, and connecting to or disconnecting from a computer.
 
@@ -95,6 +102,8 @@ app/src/main/java/io/github/phonemousekeyboard/
 │   ├── TextDiff.kt               Text box edits → Backspaces + typed characters
 │   ├── TypingQueue.kt            Sends key strokes one by one, with optional delays
 │   ├── InputActivity.kt          Whether input is being sent right now
+│   ├── AirMouseSensors.kt        Gyroscope + gravity readings for the Air mouse
+│   ├── AirMotionProcessor.kt     Phone rotation → pointer movement (pure, testable)
 │   └── MouseButton.kt
 └── ui/
     ├── MainScreen.kt             Header, current page, menu
@@ -106,6 +115,7 @@ app/src/main/java/io/github/phonemousekeyboard/
     ├── icons/                    Line icons not in the Material set (mouse, keyboard, …)
     ├── mouse/                    Trackpad, gestures, mouse buttons, mouse settings
     ├── keyboard/                 Text box page, keyboard settings
+    ├── airmouse/                 Air mouse page, illustration, settings
     ├── bluetooth/                Bluetooth settings page
     ├── components/               Reusable settings groups, rows and buttons
     └── theme/                    Minimal dark theme

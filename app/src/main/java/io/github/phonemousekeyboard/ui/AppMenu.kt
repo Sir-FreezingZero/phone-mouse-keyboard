@@ -53,11 +53,13 @@ import io.github.phonemousekeyboard.ui.theme.IdleGrey
  *   │ CONTROL                  │
  *   │  🖱 Mouse                │   current page highlighted
  *   │  ⌨ Keyboard             │
+ *   │  📱 Air mouse            │
  *   │ CONNECT                  │
  *   │  ᛒ Bluetooth            │
  *   │ SETTINGS                 │
  *   │  ≡ Mouse settings        │
  *   │  ≡ Keyboard settings     │
+ *   │  ≡ Air mouse settings    │
  *   │ ABOUT                    │
  *   │  </> Source code         │
  *   │                          │
@@ -82,6 +84,7 @@ const val SOURCE_CODE_URL = "https://github.com/Sir-FreezingZero/phone-mouse-key
 data class MenuActions(
     val onNavigate: (Screen) -> Unit,
     val onOpenMouseSettings: () -> Unit,
+    val onOpenAirMouseSettings: () -> Unit,
     val onOpenKeyboardSettings: () -> Unit,
     val onOpenSourceCode: () -> Unit,
 )
@@ -141,6 +144,7 @@ fun AppMenuContent(
             MenuSectionLabel("Control")
             ScreenItem(Screen.MOUSE, AppIcons.Mouse, currentScreen, actions)
             ScreenItem(Screen.KEYBOARD, AppIcons.Keyboard, currentScreen, actions)
+            ScreenItem(Screen.AIR_MOUSE, AppIcons.AirMouse, currentScreen, actions)
 
             MenuSectionLabel("Connect")
             ScreenItem(Screen.BLUETOOTH, AppIcons.Bluetooth, currentScreen, actions)
@@ -148,6 +152,7 @@ fun AppMenuContent(
             MenuSectionLabel("Settings")
             MenuItem("Mouse settings", AppIcons.Tune, onClick = actions.onOpenMouseSettings)
             MenuItem("Keyboard settings", AppIcons.Tune, onClick = actions.onOpenKeyboardSettings)
+            MenuItem("Air mouse settings", AppIcons.Tune, onClick = actions.onOpenAirMouseSettings)
 
             MenuSectionLabel("About")
             MenuItem("Source code", AppIcons.Code, onClick = actions.onOpenSourceCode)

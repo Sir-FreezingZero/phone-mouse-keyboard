@@ -4,13 +4,15 @@ package io.github.phonemousekeyboard.ui
  * Every page in the app.
  *
  * @param title shown in the header while the page is open.
- * @param isMainPage whether the page is one of the app's main abilities (Mouse, Keyboard),
+ * @param isMainPage whether the page is one of the app's main abilities (Mouse, Keyboard,
+ *   Air mouse),
  *   which the user moves between by swiping the header title. Other pages are opened from the
  *   menu.
  */
 enum class Screen(val title: String, val isMainPage: Boolean) {
     MOUSE(title = "Mouse", isMainPage = true),
     KEYBOARD(title = "Keyboard", isMainPage = true),
+    AIR_MOUSE(title = "Air mouse", isMainPage = true),
     BLUETOOTH(title = "Bluetooth", isMainPage = false);
 
     companion object {

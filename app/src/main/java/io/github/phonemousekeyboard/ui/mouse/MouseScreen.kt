@@ -3,31 +3,23 @@ package io.github.phonemousekeyboard.ui.mouse
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -98,31 +90,13 @@ fun MouseScreen(
         if (settings.showButtons) {
             HorizontalDivider(color = lineColor)
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp),
-            ) {
-                MouseButtonPad(
-                    label = "Left",
-                    onPress = {
-                        vibrate()
-                        onButtonPress(MouseButton.LEFT)
-                    },
-                    onRelease = { onButtonRelease(MouseButton.LEFT) },
-                    modifier = Modifier.weight(1f),
-                )
-                VerticalDivider(color = lineColor)
-                MouseButtonPad(
-                    label = "Right",
-                    onPress = {
-                        vibrate()
-                        onButtonPress(MouseButton.RIGHT)
-                    },
-                    onRelease = { onButtonRelease(MouseButton.RIGHT) },
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            MouseButtonRow(
+                onPress = { button ->
+                    vibrate()
+                    onButtonPress(button)
+                },
+                onRelease = onButtonRelease,
+            )
         }
     }
 }
@@ -199,43 +173,4 @@ private fun trackpadHint(settings: MouseSettings): String {
     return listOf("Trackpad", "", clicks, "Two-finger drag to scroll")
         .filterIndexed { index, line -> index < 2 || line.isNotEmpty() }
         .joinToString("\n")
-}
-
-/**
- * A mouse button that stays pressed for as long as the finger is down, so click-and-drag
- * works (hold Left here, drag on the trackpad with another finger).
- */
-@Composable
-private fun MouseButtonPad(
-    label: String,
-    onPress: () -> Unit,
-    onRelease: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val currentOnPress by rememberUpdatedState(onPress)
-    val currentOnRelease by rememberUpdatedState(onRelease)
-    var isPressed by remember { mutableStateOf(false) }
-
-    // Unpressed buttons share the unit's background; a press darkens just this button.
-    val background = if (isPressed) MaterialTheme.colorScheme.outline else Color.Transparent
-
-    Box(
-        modifier = modifier
-            .fillMaxHeight()
-            .background(background)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = {
-                        isPressed = true
-                        currentOnPress()
-                        tryAwaitRelease()
-                        isPressed = false
-                        currentOnRelease()
-                    },
-                )
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text = label, style = MaterialTheme.typography.labelLarge)
-    }
 }

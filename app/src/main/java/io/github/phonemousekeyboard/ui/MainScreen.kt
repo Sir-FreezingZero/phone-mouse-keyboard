@@ -22,6 +22,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.phonemousekeyboard.MainViewModel
 import io.github.phonemousekeyboard.PermissionStatus
 import io.github.phonemousekeyboard.bluetooth.ConnectionState
+import io.github.phonemousekeyboard.ui.airmouse.AirMouseScreen
+import io.github.phonemousekeyboard.ui.airmouse.AirMouseSettingsSheet
 import io.github.phonemousekeyboard.ui.bluetooth.BluetoothActions
 import io.github.phonemousekeyboard.ui.bluetooth.BluetoothScreen
 import io.github.phonemousekeyboard.ui.keyboard.KeyboardScreen
@@ -51,6 +53,7 @@ fun MainScreen(
     val isSendingInput by viewModel.isSendingInput.collectAsStateWithLifecycle()
     val bluetoothState by viewModel.bluetoothUiState.collectAsStateWithLifecycle()
     val mouseSettings by viewModel.mouseSettings.collectAsStateWithLifecycle()
+    val airMouseSettings by viewModel.airMouseSettings.collectAsStateWithLifecycle()
     val keyboardSettings by viewModel.keyboardSettings.collectAsStateWithLifecycle()
     val pendingKeystrokes by viewModel.pendingKeystrokes.collectAsStateWithLifecycle()
 
@@ -59,6 +62,7 @@ fun MainScreen(
     var lastMainPage by rememberSaveable { mutableStateOf(Screen.MOUSE) }
 
     var isMouseSettingsOpen by rememberSaveable { mutableStateOf(false) }
+    var isAirMouseSettingsOpen by rememberSaveable { mutableStateOf(false) }
     var isKeyboardSettingsOpen by rememberSaveable { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -80,6 +84,7 @@ fun MainScreen(
     val menuActions = MenuActions(
         onNavigate = { screen -> closeMenuAnd { navigateTo(screen) } },
         onOpenMouseSettings = { closeMenuAnd { isMouseSettingsOpen = true } },
+        onOpenAirMouseSettings = { closeMenuAnd { isAirMouseSettingsOpen = true } },
         onOpenKeyboardSettings = { closeMenuAnd { isKeyboardSettingsOpen = true } },
         onOpenSourceCode = {
             // Fails quietly if the phone has no browser.
@@ -128,6 +133,11 @@ fun MainScreen(
                             onOpenSettings = { isKeyboardSettingsOpen = true },
                             onReset = viewModel::resetKeyboardSettings,
                         )
+                        Screen.AIR_MOUSE -> settingsOverflowItems(
+                            settingsLabel = "Air mouse settings",
+                            onOpenSettings = { isAirMouseSettingsOpen = true },
+                            onReset = viewModel::resetAirMouseSettings,
+                        )
                         Screen.BLUETOOTH -> null
                     },
                 )
@@ -158,6 +168,15 @@ fun MainScreen(
                     modifier = contentModifier.imePadding(),
                 )
 
+                Screen.AIR_MOUSE -> AirMouseScreen(
+                    settings = airMouseSettings,
+                    vibrateOnClick = mouseSettings.vibrateOnClick,
+                    onMove = viewModel::moveMouse,
+                    onButtonPress = viewModel::pressMouseButton,
+                    onButtonRelease = viewModel::releaseMouseButton,
+                    modifier = contentModifier,
+                )
+
                 Screen.BLUETOOTH -> BluetoothScreen(
                     state = bluetoothState,
                     permissions = permissions,
@@ -174,6 +193,15 @@ fun MainScreen(
             onChange = viewModel::updateMouseSettings,
             onReset = viewModel::resetMouseSettings,
             onDismiss = { isMouseSettingsOpen = false },
+        )
+    }
+
+    if (isAirMouseSettingsOpen) {
+        AirMouseSettingsSheet(
+            settings = airMouseSettings,
+            onChange = viewModel::updateAirMouseSettings,
+            onReset = viewModel::resetAirMouseSettings,
+            onDismiss = { isAirMouseSettingsOpen = false },
         )
     }
 

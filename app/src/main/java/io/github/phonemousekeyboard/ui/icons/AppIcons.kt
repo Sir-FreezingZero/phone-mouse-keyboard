@@ -58,6 +58,28 @@ object AppIcons {
         }
     }
 
+    /** A phone with motion waves coming off its top corner, for the Air mouse. */
+    val AirMouse: ImageVector by lazy {
+        lineIcon("Air mouse") {
+            // Phone outline.
+            moveTo(5.5f, 8f)
+            horizontalLineTo(11.5f)
+            arcTo(1.5f, 1.5f, 0f, isMoreThanHalf = false, isPositiveArc = true, x1 = 13f, y1 = 9.5f)
+            verticalLineTo(19.5f)
+            arcTo(1.5f, 1.5f, 0f, isMoreThanHalf = false, isPositiveArc = true, x1 = 11.5f, y1 = 21f)
+            horizontalLineTo(5.5f)
+            arcTo(1.5f, 1.5f, 0f, isMoreThanHalf = false, isPositiveArc = true, x1 = 4f, y1 = 19.5f)
+            verticalLineTo(9.5f)
+            arcTo(1.5f, 1.5f, 0f, isMoreThanHalf = false, isPositiveArc = true, x1 = 5.5f, y1 = 8f)
+            close()
+            // Two motion arcs, centred on the phone's top-right corner.
+            moveTo(15f, 6f)
+            arcTo(3f, 3f, 0f, isMoreThanHalf = false, isPositiveArc = true, x1 = 18f, y1 = 9f)
+            moveTo(15f, 3f)
+            arcTo(6f, 6f, 0f, isMoreThanHalf = false, isPositiveArc = true, x1 = 21f, y1 = 9f)
+        }
+    }
+
     /** The Bluetooth rune. */
     val Bluetooth: ImageVector by lazy {
         lineIcon("Bluetooth") {
