@@ -3,16 +3,8 @@ package io.github.phonemousekeyboard.bluetooth
 /** Everything the UI needs to know about the Bluetooth link to the host computer. */
 sealed interface ConnectionState {
 
-    /**
-     * Bluetooth is off or missing, or the keyboard/mouse service couldn't start.
-     *
-     * @param isFeatureMissing true when the phone lacks the feature the current [HidMode]
-     *   needs, so switching to the other mode is worth trying.
-     */
-    data class Unavailable(
-        val reason: String,
-        val isFeatureMissing: Boolean = false,
-    ) : ConnectionState
+    /** Bluetooth is off or missing, or the keyboard/mouse service couldn't start. */
+    data class Unavailable(val reason: String) : ConnectionState
 
     /** Setting up the keyboard/mouse service; [step] describes what we're waiting for. */
     data class Starting(val step: String) : ConnectionState

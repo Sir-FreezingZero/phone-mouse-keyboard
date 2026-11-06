@@ -5,22 +5,12 @@ import android.bluetooth.BluetoothDevice
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * The two ways this app can appear to a computer as a Bluetooth keyboard + mouse.
- *
- * Both are standard, so the computer needs no extra software either way. Android phones
- * support them differently, which is why the app has both.
- */
-enum class HidMode(val label: String) {
-    /** Classic Bluetooth, via Android's built-in "HID Device" feature. Some phones lack it. */
-    CLASSIC("Classic Bluetooth"),
-
-    /** Bluetooth Low Energy "HID over GATT", the way most modern wireless mice work. */
-    BLE("Bluetooth Low Energy"),
-}
-
-/**
  * Something that can present this phone to a computer as a keyboard + mouse and deliver
- * input reports to it. See [ClassicHidTransport] and [BleHidTransport].
+ * input reports to it.
+ *
+ * The app uses Bluetooth Low Energy ([io.github.phonemousekeyboard.bluetooth.ble.BleHidTransport]).
+ * A classic Bluetooth implementation existed before and can be restored from the
+ * `classic-bluetooth` branch; this interface is what it plugged into.
  *
  * All methods must be called on the main thread. Methods that touch Bluetooth require the
  * Bluetooth permissions; the caller requests them before calling [start].

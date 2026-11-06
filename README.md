@@ -27,25 +27,28 @@ green when connected, and blue with ripples running along it while input is bein
     text is typed out gradually (with a **Stop** button while it sends); typed text fading out of
     the box after a set time; phone autocorrect on or off; clear the box after Enter.
 - **Menu → Connect → Bluetooth:** one page for everything connection-related: permissions,
-  connection type, pairing instructions, and connecting to or disconnecting from a computer.
+  pairing instructions, and connecting to or disconnecting from a computer.
 
-## Two ways to be a keyboard
+## How it connects
 
-The app can present the phone to a computer in two standard ways. Both work without any
-software on the computer.
+The phone acts as a **Bluetooth Low Energy keyboard and mouse** ("HID over GATT"), the way most
+modern wireless mice and keyboards work. Computers support this natively, so nothing needs to be
+installed on the computer.
 
-| Connection type | How | Phone support |
-| --- | --- | --- |
-| **Classic Bluetooth** | Android's built-in "HID Device" profile | Android 9+, but some manufacturers disable it |
-| **Bluetooth Low Energy** | "HID over GATT", like most modern wireless mice | Most phones that can advertise over BLE |
+The computer needs Bluetooth 4.0 or newer and an operating system that supports Bluetooth Low
+Energy keyboards and mice: current Windows, macOS, Linux, ChromeOS, iPadOS and Android all do.
 
-The app tries classic Bluetooth first. If the phone doesn't have it, the app switches to
-Bluetooth Low Energy by itself and remembers that. You can also switch on the Bluetooth page.
+> **Classic Bluetooth was removed.** Earlier versions could also connect over classic Bluetooth
+> (Android's "HID Device" profile), which helps with some older computers, TVs and consoles that
+> don't support Bluetooth Low Energy keyboards. It was dropped to keep the app simple, because
+> many phones disable that profile. The last version with it is on the
+> [`classic-bluetooth`](../../tree/classic-bluetooth) branch, and the code is built to plug back
+> in behind the `HidTransport` interface if it's needed again.
 
 ## Requirements
 
 - Android 9 (API 28) or newer.
-- Either the classic Bluetooth "HID Device" profile, or Bluetooth Low Energy advertising.
+- A phone that supports Bluetooth Low Energy advertising (most do).
 
 ## Building
 
@@ -61,11 +64,8 @@ Bluetooth Low Energy by itself and remembers that. You can also switch on the Bl
 3. If the phone was paired with the computer before (e.g. as a phone), remove it on the computer
    and forget the computer on the phone.
 4. Pair from the computer. On Windows: **Settings › Bluetooth & devices › Add device ›
-   Bluetooth**, then choose the phone.
-   - *Classic Bluetooth:* first tap **Start** next to *Make discoverable*, then confirm the code
-     matches on both screens.
-   - *Bluetooth Low Energy:* the phone is visible automatically while the app is open. Accept the
-     pairing prompts on the phone (there may be two) and on the computer.
+   Bluetooth**, then choose the phone. The phone is visible automatically while the app is open.
+   Accept the pairing prompts on the phone (there may be two) and on the computer.
 5. The computer connects by itself. The line under the header turns green when connected.
 
 If something goes wrong, the Bluetooth page shows the reason in red.
@@ -79,15 +79,14 @@ app/src/main/java/io/github/phonemousekeyboard/
 ├── BluetoothPermissions.kt       Which permissions are needed on which Android version
 ├── bluetooth/
 │   ├── HidDescriptor.kt          The report descriptor: "I am a keyboard + mouse"
-│   ├── HidTransport.kt           Interface shared by both connection types; HidMode
-│   ├── HidConnection.kt          Picks classic or BLE, falls back automatically
-│   ├── ClassicHidTransport.kt    Classic Bluetooth via Android's HID Device profile
+│   ├── HidTransport.kt           Interface for presenting the phone as keyboard + mouse
+│   ├── ScrollResolutionMemory.kt Which computers enabled smooth scrolling
 │   ├── ble/
 │   │   ├── BleHidTransport.kt    Bluetooth Low Energy: GATT server, advertising, pairing
 │   │   ├── HidGattProfile.kt     The HID-over-GATT services and characteristics
 │   │   ├── ReportQueue.kt        Paces input; merges mouse movement
 │   │   └── KnownHosts.kt         Remembers computers that have paired over BLE
-│   ├── BluetoothDeviceManager.kt Bluetooth on/off, paired devices, scanning, pairing
+│   ├── BluetoothDeviceManager.kt Bluetooth on/off, paired devices, pairing progress
 │   └── ConnectionState.kt        Connection states shown in the UI
 ├── input/
 │   ├── HidInput.kt               Mouse/keyboard actions → input reports
@@ -121,10 +120,7 @@ keyboard/mouse only while *Keyboard & mouse service* says **Ready**. If the comp
 before that, it remembered a plain phone. Remove the phone on the computer, forget the computer
 on the phone, wait for **Ready**, then pair again.
 
-**Classic Bluetooth never gets to Ready.** The phone's manufacturer has most likely disabled
-Android's "HID Device" profile. The app switches to Bluetooth Low Energy by itself in that case.
-
-**The phone doesn't appear in Windows' "Add device" list (Bluetooth Low Energy).** Make sure the
+**The phone doesn't appear in Windows' "Add device" list.** Make sure the
 app is open on the Bluetooth page and says **Ready**. On Windows 11, set **Settings › Bluetooth
 & devices › Devices › Bluetooth devices discovery** to **Advanced** to list every device.
 
@@ -146,7 +142,7 @@ Energy, or too many apps are already doing so. Close other Bluetooth apps and ta
 
 The Bluetooth Low Energy implementation follows the approach of
 [BLE-HID-Peripheral-for-Android](https://github.com/kshoji/BLE-HID-Peripheral-for-Android) by
-kshoji (Apache 2.0). Start-up handling for classic Bluetooth was informed by
+kshoji (Apache 2.0). The former classic Bluetooth start-up handling was informed by
 [Bluke](https://github.com/arnav-kr/Bluke).
 
 ## Contributing

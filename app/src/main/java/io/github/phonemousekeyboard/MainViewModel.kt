@@ -7,8 +7,9 @@ import androidx.lifecycle.viewModelScope
 import io.github.phonemousekeyboard.bluetooth.BluetoothDeviceManager
 import io.github.phonemousekeyboard.bluetooth.BluetoothDevicesState
 import io.github.phonemousekeyboard.bluetooth.ConnectionState
-import io.github.phonemousekeyboard.bluetooth.HidConnection
-import io.github.phonemousekeyboard.bluetooth.HidMode
+import io.github.phonemousekeyboard.bluetooth.HidTransport
+import io.github.phonemousekeyboard.bluetooth.ScrollResolutionMemory
+import io.github.phonemousekeyboard.bluetooth.ble.BleHidTransport
 import io.github.phonemousekeyboard.bluetooth.displayName
 import io.github.phonemousekeyboard.input.HidInput
 import io.github.phonemousekeyboard.input.InputActivity
@@ -40,7 +41,8 @@ import kotlin.random.Random
  */
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val connection = HidConnection(application, viewModelScope)
+    private val connection: HidTransport =
+        BleHidTransport(application, ScrollResolutionMemory(application))
     private val input = HidInput(connection, onInputSent = ::onInputSent)
     private val inputActivity = InputActivity(viewModelScope)
     private val deviceManager = BluetoothDeviceManager(application)
@@ -61,13 +63,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val isSendingInput: StateFlow<Boolean> = inputActivity.isActive
 
     val bluetoothUiState: StateFlow<BluetoothUiState> =
-        combine(
-            deviceManager.state,
-            connection.state,
-            connection.mode,
-            connection.classicProblem,
-            ::buildBluetoothUiState,
-        ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BluetoothUiState())
+        combine(deviceManager.state, connection.state, ::buildBluetoothUiState).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BluetoothUiState())
 
     init {
         deviceManager.onPaired = ::connectAfterPairing
@@ -95,16 +91,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // ---- Bluetooth page ----
 
     fun retryBluetoothService() = connection.restart()
-
-    fun switchMode(mode: HidMode) = connection.switchTo(mode)
-
-    fun startScan() = deviceManager.startScan()
-
-    fun stopScan() = deviceManager.stopScan()
-
-    fun pair(address: String) {
-        deviceManager.findDevice(address)?.let(deviceManager::pair)
-    }
 
     fun connect(address: String) {
         deviceManager.findDevice(address)?.let(connection::connect)
@@ -203,8 +189,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun buildBluetoothUiState(
         devices: BluetoothDevicesState,
         connectionState: ConnectionState,
-        mode: HidMode,
-        classicProblem: String?,
     ): BluetoothUiState {
         val connectedAddress = (connectionState as? ConnectionState.Connected)?.deviceAddress
         val connectingAddress = (connectionState as? ConnectionState.Connecting)?.deviceAddress
@@ -212,11 +196,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return BluetoothUiState(
             isBluetoothEnabled = devices.isBluetoothEnabled,
             connectionState = connectionState,
-            mode = mode,
-            classicProblem = classicProblem,
             problem = devices.pairingProblem
                 ?: (connectionState as? ConnectionState.Disconnected)?.problem,
-            isScanning = devices.isScanning,
             pairedDevices = devices.pairedDevices.map { device ->
                 DeviceItem(
                     address = device.address,
@@ -225,17 +206,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         connectedAddress -> DeviceStatus.CONNECTED
                         connectingAddress -> DeviceStatus.CONNECTING
                         else -> DeviceStatus.PAIRED
-                    },
-                )
-            },
-            nearbyDevices = devices.nearbyDevices.map { device ->
-                DeviceItem(
-                    address = device.address,
-                    name = device.displayName(),
-                    status = if (device.address == devices.pairingAddress) {
-                        DeviceStatus.PAIRING
-                    } else {
-                        DeviceStatus.NOT_PAIRED
                     },
                 )
             },

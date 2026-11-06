@@ -15,27 +15,21 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-/** A snapshot of the phone's Bluetooth radio and the devices around it. */
+/** A snapshot of the phone's Bluetooth radio and the devices paired with it. */
 data class BluetoothDevicesState(
     val isBluetoothEnabled: Boolean = false,
     val pairedDevices: List<BluetoothDevice> = emptyList(),
-    val nearbyDevices: List<BluetoothDevice> = emptyList(),
-    val isScanning: Boolean = false,
-    /** Address of the device currently being paired with, if any. */
-    val pairingAddress: String? = null,
     /** Why the last pairing attempt failed, if it did. */
     val pairingProblem: String? = null,
 )
 
 /**
- * Tracks the Bluetooth radio (on/off), the list of paired devices, and scanning for and
- * pairing with nearby devices.
+ * Tracks the Bluetooth radio (on/off), the list of paired devices, and pairing as it happens.
+ * Computers pair with the phone from their own Bluetooth settings; this only follows along.
  *
- * This is separate from [HidConnection], which only deals with acting as a
- * keyboard/mouse once a device is paired.
+ * This is separate from [io.github.phonemousekeyboard.bluetooth.ble.BleHidTransport], which deals with acting as a keyboard/mouse.
  *
- * Requires BLUETOOTH_CONNECT for everything, plus BLUETOOTH_SCAN (Android 12+) or
- * ACCESS_FINE_LOCATION (Android 11 and older) for scanning. Call [start] once granted.
+ * Requires BLUETOOTH_CONNECT on Android 12+. Call [start] once it's granted.
  */
 @SuppressLint("MissingPermission")
 class BluetoothDeviceManager(context: Context) {
@@ -51,6 +45,9 @@ class BluetoothDeviceManager(context: Context) {
 
     private var isReceiverRegistered = false
 
+    /** Address of the device currently pairing with the phone, if any. */
+    private var pairingAddress: String? = null
+
     /** Called when a device finishes pairing with this phone, e.g. to connect straight away. */
     var onPaired: ((BluetoothDevice) -> Unit)? = null
 
@@ -63,9 +60,6 @@ class BluetoothDeviceManager(context: Context) {
         if (!isReceiverRegistered) {
             val filter = IntentFilter().apply {
                 addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
-                addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED)
-                addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
-                addAction(BluetoothDevice.ACTION_FOUND)
                 addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
             }
             // These broadcasts are sent by the Bluetooth app rather than the core system,
@@ -83,7 +77,6 @@ class BluetoothDeviceManager(context: Context) {
     }
 
     fun close() {
-        stopScan()
         if (isReceiverRegistered) {
             appContext.unregisterReceiver(receiver)
             isReceiverRegistered = false
@@ -98,33 +91,6 @@ class BluetoothDeviceManager(context: Context) {
     fun findDevice(address: String): BluetoothDevice? {
         if (!BluetoothAdapter.checkBluetoothAddress(address)) return null
         return adapter?.getRemoteDevice(address)
-    }
-
-    /** Looks for nearby discoverable devices. Results arrive in [state] over ~12 seconds. */
-    fun startScan() {
-        val adapter = adapter ?: return
-        if (!adapter.isEnabled) return
-
-        if (_state.value.isScanning) adapter.cancelDiscovery()
-        _state.update { it.copy(nearbyDevices = emptyList(), pairingProblem = null) }
-        adapter.startDiscovery()
-    }
-
-    fun stopScan() {
-        if (_state.value.isScanning) adapter?.cancelDiscovery()
-    }
-
-    /** Starts pairing. Android shows its own confirmation dialog to the user. */
-    fun pair(device: BluetoothDevice) {
-        // Scanning slows down pairing considerably, so stop it first.
-        stopScan()
-        if (device.createBond()) {
-            _state.update { it.copy(pairingAddress = device.address, pairingProblem = null) }
-        } else {
-            _state.update {
-                it.copy(pairingProblem = "Couldn't start pairing with ${device.displayName()}.")
-            }
-        }
     }
 
     private fun refreshPairedDevices() {
@@ -145,15 +111,6 @@ class BluetoothDeviceManager(context: Context) {
                     intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR),
                 )
 
-                BluetoothAdapter.ACTION_DISCOVERY_STARTED ->
-                    _state.update { it.copy(isScanning = true) }
-
-                BluetoothAdapter.ACTION_DISCOVERY_FINISHED ->
-                    _state.update { it.copy(isScanning = false) }
-
-                BluetoothDevice.ACTION_FOUND ->
-                    intent.bluetoothDevice()?.let(::onDeviceFound)
-
                 BluetoothDevice.ACTION_BOND_STATE_CHANGED -> intent.bluetoothDevice()?.let {
                     onBondStateChanged(
                         device = it,
@@ -173,47 +130,35 @@ class BluetoothDeviceManager(context: Context) {
                 _state.update { it.copy(isBluetoothEnabled = true) }
                 refreshPairedDevices()
             }
-            // Everything we knew about nearby devices is stale once the radio is off.
-            BluetoothAdapter.STATE_OFF -> _state.value = BluetoothDevicesState()
-        }
-    }
-
-    private fun onDeviceFound(device: BluetoothDevice) {
-        // Paired devices already appear in their own list.
-        if (device.bondState == BluetoothDevice.BOND_BONDED) return
-
-        _state.update { current ->
-            val alreadyListed = current.nearbyDevices.any { it.address == device.address }
-            if (alreadyListed) current else current.copy(nearbyDevices = current.nearbyDevices + device)
+            BluetoothAdapter.STATE_OFF -> {
+                pairingAddress = null
+                _state.value = BluetoothDevicesState()
+            }
         }
     }
 
     private fun onBondStateChanged(device: BluetoothDevice, bondState: Int) {
-        val wasBeingPaired = _state.value.pairingAddress == device.address
+        val wasBeingPaired = pairingAddress == device.address
 
         when (bondState) {
-            BluetoothDevice.BOND_BONDING -> _state.update {
-                it.copy(pairingAddress = device.address, pairingProblem = null)
+            BluetoothDevice.BOND_BONDING -> {
+                pairingAddress = device.address
+                _state.update { it.copy(pairingProblem = null) }
             }
 
-            BluetoothDevice.BOND_BONDED -> _state.update { current ->
-                current.copy(
-                    pairingAddress = current.pairingAddress.takeUnless { wasBeingPaired },
-                    nearbyDevices = current.nearbyDevices.filterNot { it.address == device.address },
-                )
+            BluetoothDevice.BOND_BONDED -> {
+                if (wasBeingPaired) pairingAddress = null
             }
 
-            BluetoothDevice.BOND_NONE -> _state.update { current ->
-                current.copy(
-                    pairingAddress = current.pairingAddress.takeUnless { wasBeingPaired },
-                    pairingProblem = if (wasBeingPaired) {
-                        "Pairing with ${device.displayName()} failed. On Windows, a " +
-                            "notification asks you to allow the pairing; accept it within a " +
-                            "few seconds and confirm the code matches."
-                    } else {
-                        current.pairingProblem
-                    },
-                )
+            BluetoothDevice.BOND_NONE -> if (wasBeingPaired) {
+                pairingAddress = null
+                _state.update {
+                    it.copy(
+                        pairingProblem = "Pairing with ${device.displayName()} failed. Accept " +
+                            "the pairing prompts on both the phone and the computer within a " +
+                            "few seconds, then try again.",
+                    )
+                }
             }
         }
         refreshPairedDevices()

@@ -39,8 +39,8 @@ import kotlinx.coroutines.flow.asStateFlow
  * Presents the phone as a Bluetooth Low Energy keyboard + mouse ("HID over GATT"), the way
  * most modern wireless mice and keyboards work.
  *
- * This doesn't need Android's classic "HID Device" feature, which some manufacturers disable.
  * It needs the phone to support BLE peripheral mode (advertising), which most phones do.
+ * (Android's classic "HID Device" feature isn't used: some manufacturers disable it.)
  *
  * How it works:
  *  1. Publish the keyboard/mouse description ([HidGattProfile]) on a GATT server.
@@ -106,7 +106,6 @@ class BleHidTransport(
             adapter.bluetoothLeAdvertiser == null || !adapter.isMultipleAdvertisementSupported -> {
                 _state.value = ConnectionState.Unavailable(
                     "This phone can't act as a Bluetooth Low Energy device (no BLE advertising).",
-                    isFeatureMissing = true,
                 )
                 return
             }

@@ -17,9 +17,6 @@ import io.github.phonemousekeyboard.ui.MainScreen
 import io.github.phonemousekeyboard.ui.SystemActions
 import io.github.phonemousekeyboard.ui.theme.PhoneMouseKeyboardTheme
 
-/** How long the phone stays visible to nearby computers when "Make discoverable" is tapped. */
-private const val DISCOVERABLE_SECONDS = 120
-
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
@@ -41,12 +38,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // The system shows its own feedback for these, and the app reacts to the resulting
-    // Bluetooth broadcasts, so the results themselves aren't needed.
+    // The system shows its own feedback for this, and the app reacts to the resulting
+    // Bluetooth broadcast, so the result itself isn't needed.
     private val turnOnBluetoothLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) {}
-    private val discoverableLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) {}
 
@@ -64,11 +58,6 @@ class MainActivity : ComponentActivity() {
         },
         turnOnBluetooth = {
             turnOnBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
-        },
-        makeDiscoverable = {
-            val intent = Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE)
-                .putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, DISCOVERABLE_SECONDS)
-            discoverableLauncher.launch(intent)
         },
         openBluetoothSettings = { startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) },
     )

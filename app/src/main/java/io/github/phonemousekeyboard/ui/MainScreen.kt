@@ -33,7 +33,6 @@ import kotlinx.coroutines.launch
 data class SystemActions(
     val requestPermissions: () -> Unit,
     val turnOnBluetooth: () -> Unit,
-    val makeDiscoverable: () -> Unit,
     val openBluetoothSettings: () -> Unit,
 )
 
@@ -76,12 +75,7 @@ fun MainScreen(
             onGrantPermissions = systemActions.requestPermissions,
             onTurnOnBluetooth = systemActions.turnOnBluetooth,
             onRetryService = viewModel::retryBluetoothService,
-            onSwitchMode = viewModel::switchMode,
-            onMakeDiscoverable = systemActions.makeDiscoverable,
             onOpenSystemSettings = systemActions.openBluetoothSettings,
-            onStartScan = viewModel::startScan,
-            onStopScan = viewModel::stopScan,
-            onPair = viewModel::pair,
             onConnect = viewModel::connect,
             onDisconnect = viewModel::disconnect,
         )
