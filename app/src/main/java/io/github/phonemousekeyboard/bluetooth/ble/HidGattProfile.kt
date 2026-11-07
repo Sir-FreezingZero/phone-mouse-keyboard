@@ -66,6 +66,7 @@ internal object HidGattProfile {
         HidDescriptor.KEYBOARD_REPORT_ID,
         HidDescriptor.MOUSE_REPORT_ID,
         HidDescriptor.MEDIA_REPORT_ID,
+        HidDescriptor.GAMEPAD_REPORT_ID,
     )
 
     // ---- Building the services ----

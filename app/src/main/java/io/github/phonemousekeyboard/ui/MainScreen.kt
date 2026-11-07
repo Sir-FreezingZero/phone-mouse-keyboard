@@ -28,6 +28,8 @@ import io.github.phonemousekeyboard.ui.airmouse.AirMouseScreen
 import io.github.phonemousekeyboard.ui.airmouse.AirMouseSettingsSheet
 import io.github.phonemousekeyboard.ui.bluetooth.BluetoothActions
 import io.github.phonemousekeyboard.ui.bluetooth.BluetoothScreen
+import io.github.phonemousekeyboard.ui.gamepad.GamepadActions
+import io.github.phonemousekeyboard.ui.gamepad.GamepadScreen
 import io.github.phonemousekeyboard.ui.keyboard.KeyboardScreen
 import io.github.phonemousekeyboard.ui.keyboard.KeyboardSettingsSheet
 import io.github.phonemousekeyboard.ui.links.LinksActions
@@ -129,6 +131,16 @@ fun MainScreen(
         )
     }
 
+    val gamepadActions = remember(viewModel) {
+        GamepadActions(
+            onPress = viewModel::pressGamepadButton,
+            onRelease = viewModel::releaseGamepadButton,
+            onDpad = viewModel::setGamepadDpad,
+            onStick = viewModel::setGamepadStick,
+            onReset = viewModel::resetGamepad,
+        )
+    }
+
     AppDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -171,7 +183,7 @@ fun MainScreen(
                             onOpenSettings = { isLinksSettingsOpen = true },
                             onReset = viewModel::resetLinksSettings,
                         )
-                        Screen.MEDIA, Screen.BLUETOOTH -> null
+                        Screen.MEDIA, Screen.GAMEPAD, Screen.BLUETOOTH -> null
                     },
                 )
             },
@@ -223,6 +235,12 @@ fun MainScreen(
                     vibrateOnPress = mouseSettings.vibrateOnClick,
                     onPress = viewModel::pressMediaKey,
                     onRelease = viewModel::releaseMediaKey,
+                    modifier = contentModifier,
+                )
+
+                Screen.GAMEPAD -> GamepadScreen(
+                    vibrateOnPress = mouseSettings.vibrateOnClick,
+                    actions = gamepadActions,
                     modifier = contentModifier,
                 )
 

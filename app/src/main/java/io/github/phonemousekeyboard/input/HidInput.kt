@@ -122,6 +122,35 @@ class HidInput(
         send(HidDescriptor.MEDIA_REPORT_ID, ByteArray(HidDescriptor.MEDIA_REPORT_SIZE))
     }
 
+    // ---- Gamepad ----
+
+    private val gamepad = GamepadState()
+
+    /** The last gamepad report sent, so unchanged states aren't sent again. */
+    private var lastGamepadReport: ByteArray? = null
+
+    fun pressGamepadButton(button: GamepadButton) = updateGamepad { press(button) }
+
+    fun releaseGamepadButton(button: GamepadButton) = updateGamepad { release(button) }
+
+    /** Holds the D-pad in [direction], or lets it go when null. */
+    fun setGamepadDpad(direction: DpadDirection?) = updateGamepad { setDpad(direction) }
+
+    /** Moves [stick]; [x] and [y] run from -1 (left / up) to 1 (right / down). */
+    fun setGamepadStick(stick: GamepadStick, x: Float, y: Float) =
+        updateGamepad { setStick(stick, x, y) }
+
+    /** Lets go of every gamepad button, the D-pad and both sticks. */
+    fun resetGamepad() = updateGamepad { reset() }
+
+    private fun updateGamepad(change: GamepadState.() -> Unit) {
+        gamepad.change()
+        val report = gamepad.toReport()
+        if (report.contentEquals(lastGamepadReport)) return
+        lastGamepadReport = report
+        send(HidDescriptor.GAMEPAD_REPORT_ID, report)
+    }
+
     private fun send(reportId: Int, report: ByteArray) {
         transport.sendReport(reportId, report)
         onInputSent()

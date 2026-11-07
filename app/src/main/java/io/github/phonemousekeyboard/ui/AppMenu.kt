@@ -65,6 +65,7 @@ import io.github.phonemousekeyboard.ui.theme.IdleGrey
  *   │  📱 Air mouse       [●]  │
  *   │  ↗ Links           [●]  │
  *   │  ⏯ Media           [●]  │
+ *   │  🎮 Gamepad         [●]  │
  *   │ SETTINGS                 │
  *   │  ≡ Mouse settings        │
  *   │  ≡ Keyboard settings     │
@@ -261,6 +262,7 @@ private val ControlPageIcons: List<Pair<Screen, ImageVector>> = listOf(
     Screen.AIR_MOUSE to AppIcons.AirMouse,
     Screen.LINKS to AppIcons.Link,
     Screen.MEDIA to AppIcons.Media,
+    Screen.GAMEPAD to AppIcons.Gamepad,
 )
 
 /** The small switch beside a Control item: whether the page appears in the header. */

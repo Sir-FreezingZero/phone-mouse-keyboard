@@ -117,6 +117,29 @@ object AppIcons {
         }
     }
 
+    /** A game controller: a rounded body with a D-pad cross on the left and two buttons. */
+    val Gamepad: ImageVector by lazy {
+        lineIcon("Gamepad") {
+            // Body.
+            moveTo(7f, 7f)
+            horizontalLineTo(17f)
+            arcTo(5f, 5f, 0f, isMoreThanHalf = false, isPositiveArc = true, x1 = 17f, y1 = 17f)
+            horizontalLineTo(7f)
+            arcTo(5f, 5f, 0f, isMoreThanHalf = false, isPositiveArc = true, x1 = 7f, y1 = 7f)
+            close()
+            // D-pad.
+            moveTo(5.5f, 12f)
+            horizontalLineTo(9.5f)
+            moveTo(7.5f, 10f)
+            verticalLineTo(14f)
+            // Two buttons, drawn as dots.
+            moveTo(15f, 11f)
+            lineTo(15.01f, 11f)
+            moveTo(17.5f, 13f)
+            lineTo(17.51f, 13f)
+        }
+    }
+
     /** The Bluetooth rune. */
     val Bluetooth: ImageVector by lazy {
         lineIcon("Bluetooth") {

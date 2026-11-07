@@ -11,6 +11,9 @@ import io.github.phonemousekeyboard.bluetooth.HidTransport
 import io.github.phonemousekeyboard.bluetooth.ScrollResolutionMemory
 import io.github.phonemousekeyboard.bluetooth.ble.BleHidTransport
 import io.github.phonemousekeyboard.bluetooth.displayName
+import io.github.phonemousekeyboard.input.DpadDirection
+import io.github.phonemousekeyboard.input.GamepadButton
+import io.github.phonemousekeyboard.input.GamepadStick
 import io.github.phonemousekeyboard.input.HidInput
 import io.github.phonemousekeyboard.input.InputActivity
 import io.github.phonemousekeyboard.input.LinkOpener
@@ -244,6 +247,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun pressMediaKey(key: MediaKey) = input.pressMediaKey(key)
 
     fun releaseMediaKey() = input.releaseMediaKey()
+
+    // ---- Gamepad ----
+
+    fun pressGamepadButton(button: GamepadButton) = input.pressGamepadButton(button)
+
+    fun releaseGamepadButton(button: GamepadButton) = input.releaseGamepadButton(button)
+
+    fun setGamepadDpad(direction: DpadDirection?) = input.setGamepadDpad(direction)
+
+    fun setGamepadStick(stick: GamepadStick, x: Float, y: Float) =
+        input.setGamepadStick(stick, x, y)
+
+    fun resetGamepad() = input.resetGamepad()
 
     private fun onInputSent() {
         // Input only reaches the computer while connected; otherwise it isn't "sent".

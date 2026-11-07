@@ -6,7 +6,7 @@ being controlled: the phone shows up as an ordinary Bluetooth keyboard/mouse.
 
 ## Features
 
-The app has five main pages: Mouse, Keyboard, Air mouse, Links and Media. Swipe the title at the top to move between them;
+The app has six main pages: Mouse, Keyboard, Air mouse, Links, Media and Gamepad. Swipe the title at the top to move between them;
 the names of the other pages show faintly either side of the current one. The switches next to
 the pages in the menu choose which ones appear in the title; hidden pages still open from the menu.
 
@@ -55,6 +55,13 @@ green when connected, and blue with ripples running along it while input is bein
   fast forward, volume down, mute and volume up. Holding a button holds the key, so holding
   a volume button keeps changing the volume. (Rewind and fast forward only work in players
   that support those keys.)
+- **Gamepad page:** a game controller the computer sees as a standard gamepad (it appears
+  in Windows' "Game controllers"): two thumbsticks, a D-pad (slide your thumb to roll onto
+  the diagonals), A/B/X/Y, L1/R1, L2/R2, L3/R3, Select, Start and Home. Several controls work
+  at once, one per finger. Works in portrait or landscape.
+  - Games that support generic (DirectInput) controllers, and Steam with its controller
+    settings, can use it. Games that only accept Xbox (XInput) controllers won't see it;
+    Steam Input can bridge that for Steam games.
 - **Menu → Connect → Bluetooth:** one page for everything connection-related: permissions,
   pairing instructions, and connecting to or disconnecting from a computer.
 
@@ -136,6 +143,7 @@ app/src/main/java/io/github/phonemousekeyboard/
 │   ├── TiltControl.kt            Tilt style (accelerometer joystick)
 │   ├── LinkOpener.kt             Opens a web address via browser shortcuts and typing
 │   ├── MediaKey.kt               Media keys and their Consumer usage IDs
+│   ├── Gamepad.kt                Gamepad buttons, D-pad, sticks and their report
 │   └── MouseButton.kt
 └── ui/
     ├── MainScreen.kt             Header, current page, menu
@@ -151,6 +159,7 @@ app/src/main/java/io/github/phonemousekeyboard/
     ├── airmouse/                 Air mouse page, illustration, settings
     ├── links/                    Links page, saved links, links settings
     ├── media/                    Media keys page
+    ├── gamepad/                  Gamepad page: sticks, D-pad, buttons
     ├── bluetooth/                Bluetooth settings page
     ├── components/               Reusable settings groups, rows and buttons
     └── theme/                    Minimal dark theme
@@ -158,7 +167,7 @@ app/src/main/java/io/github/phonemousekeyboard/
 
 ## Troubleshooting
 
-**Media keys or smooth scrolling don't work after updating the app.** The computer learns
+**Media keys, the gamepad or smooth scrolling don't work after updating the app.** The computer learns
 what the phone can send during pairing, and remembers it. Remove the phone on the computer
 and pair again once.
 
