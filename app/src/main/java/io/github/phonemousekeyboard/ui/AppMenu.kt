@@ -56,6 +56,8 @@ import io.github.phonemousekeyboard.ui.theme.IdleGrey
  *   │ Phone Mouse & Keyboard   │   app name
  *   │ ● Connected to ZERO      │   connection summary (tap → Bluetooth)
  *   │──────────────────────────│
+ *   │ CONNECT                  │
+ *   │  ᛒ Bluetooth            │
  *   │ CONTROL                  │
  *   │  ──────────────────────  │   underline, inset from both sides
  *   │  🖱 Mouse           [●]  │   current page highlighted; the switch shows or
@@ -63,8 +65,6 @@ import io.github.phonemousekeyboard.ui.theme.IdleGrey
  *   │  📱 Air mouse       [●]  │
  *   │  ↗ Links           [●]  │
  *   │  ⏯ Media           [●]  │
- *   │ CONNECT                  │
- *   │  ᛒ Bluetooth            │
  *   │ SETTINGS                 │
  *   │  ≡ Mouse settings        │
  *   │  ≡ Keyboard settings     │
@@ -161,6 +161,9 @@ fun AppMenuContent(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 4.dp),
         ) {
+            MenuSectionLabel("Connect")
+            ScreenItem(Screen.BLUETOOTH, AppIcons.Bluetooth, currentScreen, actions)
+
             MenuSectionLabel("Control")
             // The last page shown in the header can't be hidden too.
             val isLastShown = Screen.mainPages.count { it !in hiddenPages } == 1
@@ -178,9 +181,6 @@ fun AppMenuContent(
                     ),
                 )
             }
-
-            MenuSectionLabel("Connect")
-            ScreenItem(Screen.BLUETOOTH, AppIcons.Bluetooth, currentScreen, actions)
 
             MenuSectionLabel("Settings")
             MenuItem("Mouse settings", AppIcons.Tune, onClick = actions.onOpenMouseSettings)
