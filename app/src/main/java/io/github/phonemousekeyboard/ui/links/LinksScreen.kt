@@ -38,6 +38,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.phonemousekeyboard.ui.components.pagePadding
 
 /** Everything the Links page can ask for, grouped to keep the parameter list short. */
 data class LinksActions(
@@ -74,7 +75,7 @@ fun LinksScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .pagePadding(),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -96,7 +97,7 @@ fun LinksScreen(
                         "it in the computer's browser.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 16.dp),
+                    modifier = Modifier.padding(vertical = 8.dp),
                 )
             } else {
                 LazyColumn {
@@ -126,7 +127,7 @@ fun LinksScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 8.dp),
+            modifier = Modifier.padding(top = 4.dp),
         )
     }
 
@@ -156,9 +157,9 @@ private fun LinkRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 56.dp)
+            .heightIn(min = 48.dp)
             .clickable(role = Role.Button, onClick = onOpen)
-            .padding(start = 4.dp, top = 6.dp, bottom = 6.dp),
+            .padding(start = 4.dp, top = 2.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {

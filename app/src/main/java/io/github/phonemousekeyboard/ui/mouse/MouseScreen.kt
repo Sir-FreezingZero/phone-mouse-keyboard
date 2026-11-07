@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +23,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.phonemousekeyboard.input.MouseButton
+import io.github.phonemousekeyboard.ui.components.pagePadding
 import kotlin.math.hypot
 
 /**
@@ -69,7 +69,7 @@ fun MouseScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .pagePadding()
             .clip(UnitShape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .border(1.dp, lineColor, UnitShape),

@@ -17,6 +17,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
@@ -25,6 +26,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +42,9 @@ import androidx.compose.ui.unit.dp
 
 /** Horizontal padding shared by everything inside a group, so edges line up. */
 private val RowHorizontalPadding = 12.dp
+
+/** Minimum height of a row: compact, but still easy to tap. */
+private val RowMinHeight = 40.dp
 
 private val GroupShape = RoundedCornerShape(8.dp)
 private val ButtonShape = RoundedCornerShape(6.dp)
@@ -60,7 +65,7 @@ fun SettingsGroup(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(32.dp)
+                .height(24.dp)
                 .padding(start = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -109,8 +114,8 @@ fun SettingRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .padding(horizontal = RowHorizontalPadding, vertical = 6.dp),
+            .heightIn(min = RowMinHeight)
+            .padding(horizontal = RowHorizontalPadding, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -185,7 +190,7 @@ fun GroupNote(
         text = text,
         style = MaterialTheme.typography.bodySmall,
         color = color,
-        modifier = Modifier.padding(horizontal = RowHorizontalPadding, vertical = 10.dp),
+        modifier = Modifier.padding(horizontal = RowHorizontalPadding, vertical = 6.dp),
     )
 }
 
@@ -193,8 +198,8 @@ fun GroupNote(
 @Composable
 fun NumberedSteps(steps: List<String>) {
     Column(
-        modifier = Modifier.padding(horizontal = RowHorizontalPadding, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.padding(horizontal = RowHorizontalPadding, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         steps.forEachIndexed { index, step ->
             Row {
@@ -222,9 +227,9 @@ fun SwitchRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp)
+            .heightIn(min = RowMinHeight)
             .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
-            .padding(horizontal = RowHorizontalPadding, vertical = 6.dp),
+            .padding(horizontal = RowHorizontalPadding, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -259,7 +264,7 @@ fun SliderRow(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = RowHorizontalPadding, end = RowHorizontalPadding, top = 10.dp),
+            .padding(start = RowHorizontalPadding, end = RowHorizontalPadding, top = 6.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -302,16 +307,22 @@ fun <T> ChoiceRow(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = RowHorizontalPadding, vertical = 8.dp),
+            .padding(horizontal = RowHorizontalPadding, vertical = 6.dp),
     ) {
         Text(text = title, style = MaterialTheme.typography.bodyMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            options.forEach { option ->
-                FilterChip(
-                    selected = option == selected,
-                    onClick = { onSelect(option) },
-                    label = { Text(label(option)) },
-                )
+        // The chips are 32 dp tall; without this each would reserve 48 dp of height to tap.
+        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+            Row(
+                modifier = Modifier.padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                options.forEach { option ->
+                    FilterChip(
+                        selected = option == selected,
+                        onClick = { onSelect(option) },
+                        label = { Text(label(option)) },
+                    )
+                }
             }
         }
         if (detail != null) {

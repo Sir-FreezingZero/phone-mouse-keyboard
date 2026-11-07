@@ -39,8 +39,9 @@ import io.github.phonemousekeyboard.input.AirMotionSettings
 import io.github.phonemousekeyboard.input.AirMouseController
 import io.github.phonemousekeyboard.input.AirMouseMethod
 import io.github.phonemousekeyboard.input.AirMouseSensors
-import io.github.phonemousekeyboard.input.TiltControl
 import io.github.phonemousekeyboard.input.MouseButton
+import io.github.phonemousekeyboard.input.TiltControl
+import io.github.phonemousekeyboard.ui.components.pagePadding
 import io.github.phonemousekeyboard.ui.mouse.FractionalAccumulator
 import io.github.phonemousekeyboard.ui.mouse.MouseButtonRow
 import java.util.Locale
@@ -119,7 +120,7 @@ fun AirMouseScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .pagePadding()
             .clip(UnitShape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .border(1.dp, lineColor, UnitShape),
@@ -190,7 +191,7 @@ private fun Hint(method: AirMouseMethod, modifier: Modifier = Modifier) {
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         // Leaves room on the right for the Recenter and Pause buttons.
-        modifier = modifier.padding(start = 12.dp, top = 12.dp, end = 176.dp),
+        modifier = modifier.padding(start = 8.dp, top = 8.dp, end = 176.dp),
     )
 }
 
@@ -201,7 +202,7 @@ private fun StatusText(text: String, modifier: Modifier = Modifier) {
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
-        modifier = modifier.padding(12.dp),
+        modifier = modifier.padding(8.dp),
     )
 }
 

@@ -1,18 +1,18 @@
 package io.github.phonemousekeyboard.ui.bluetooth
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import io.github.phonemousekeyboard.PermissionStatus
 import io.github.phonemousekeyboard.bluetooth.ConnectionState
 import io.github.phonemousekeyboard.ui.components.GroupDivider
 import io.github.phonemousekeyboard.ui.components.GroupNote
+import io.github.phonemousekeyboard.ui.components.GroupSpacing
 import io.github.phonemousekeyboard.ui.components.NumberedSteps
+import io.github.phonemousekeyboard.ui.components.PageContentPadding
 import io.github.phonemousekeyboard.ui.components.SettingRow
 import io.github.phonemousekeyboard.ui.components.SettingsGroup
 import io.github.phonemousekeyboard.ui.theme.ConnectedGreen
@@ -40,8 +40,8 @@ fun BluetoothScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PageContentPadding,
+        verticalArrangement = Arrangement.spacedBy(GroupSpacing),
     ) {
         item { StatusGroup(state, permissions, actions) }
         item { PairingGuideGroup() }

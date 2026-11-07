@@ -19,9 +19,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.phonemousekeyboard.ui.components.ChoiceRow
+import io.github.phonemousekeyboard.ui.components.CompactDragHandle
 import io.github.phonemousekeyboard.ui.components.GroupDivider
+import io.github.phonemousekeyboard.ui.components.GroupSpacing
 import io.github.phonemousekeyboard.ui.components.GroupTitleButton
 import io.github.phonemousekeyboard.ui.components.SettingsGroup
+import io.github.phonemousekeyboard.ui.components.SheetContentPadding
 import io.github.phonemousekeyboard.ui.components.SliderRow
 import io.github.phonemousekeyboard.ui.components.SwitchRow
 import java.util.Locale
@@ -46,13 +49,14 @@ fun AirMouseSettingsSheet(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         containerColor = MaterialTheme.colorScheme.background,
+        dragHandle = { CompactDragHandle() },
     ) {
         Column(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
-                .padding(start = 12.dp, end = 12.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(SheetContentPadding),
+            verticalArrangement = Arrangement.spacedBy(GroupSpacing),
         ) {
             Row(
                 modifier = Modifier
@@ -62,7 +66,7 @@ fun AirMouseSettingsSheet(
             ) {
                 Text(
                     text = "Air mouse settings",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
                 )
                 GroupTitleButton(label = "Reset", onClick = onReset)

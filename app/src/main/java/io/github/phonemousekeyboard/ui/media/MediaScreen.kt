@@ -37,10 +37,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.phonemousekeyboard.input.MediaKey
+import io.github.phonemousekeyboard.ui.components.pagePadding
 import io.github.phonemousekeyboard.ui.icons.MediaIcons
 
 private val ButtonShape = RoundedCornerShape(8.dp)
-private val ButtonSpacing = 8.dp
+private val ButtonSpacing = 6.dp
 
 /**
  * The Media page: the media keys of a keyboard, for whatever is playing on the computer.
@@ -74,7 +75,7 @@ fun MediaScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .pagePadding(),
         verticalArrangement = Arrangement.spacedBy(ButtonSpacing),
     ) {
         SectionTitle("Playback")
@@ -82,7 +83,7 @@ fun MediaScreen(
             left = MediaButtonSpec(MediaKey.PREVIOUS_TRACK, MediaIcons.Previous, "Previous"),
             middle = MediaButtonSpec(MediaKey.PLAY_PAUSE, MediaIcons.PlayPause, "Play/pause"),
             right = MediaButtonSpec(MediaKey.NEXT_TRACK, MediaIcons.Next, "Next"),
-            height = 96.dp,
+            height = 80.dp,
             onPress = press,
             onRelease = onRelease,
         )
@@ -90,17 +91,17 @@ fun MediaScreen(
             left = MediaButtonSpec(MediaKey.REWIND, MediaIcons.Rewind, "Rewind"),
             middle = MediaButtonSpec(MediaKey.STOP, MediaIcons.Stop, "Stop"),
             right = MediaButtonSpec(MediaKey.FAST_FORWARD, MediaIcons.FastForward, "Fast forward"),
-            height = 72.dp,
+            height = 60.dp,
             onPress = press,
             onRelease = onRelease,
         )
 
-        SectionTitle("Volume", modifier = Modifier.padding(top = 16.dp))
+        SectionTitle("Volume", modifier = Modifier.padding(top = 8.dp))
         MediaButtonRow(
             left = MediaButtonSpec(MediaKey.VOLUME_DOWN, MediaIcons.VolumeDown, "Volume down"),
             middle = MediaButtonSpec(MediaKey.MUTE, MediaIcons.Mute, "Mute"),
             right = MediaButtonSpec(MediaKey.VOLUME_UP, MediaIcons.VolumeUp, "Volume up"),
-            height = 96.dp,
+            height = 80.dp,
             onPress = press,
             onRelease = onRelease,
         )
@@ -109,7 +110,7 @@ fun MediaScreen(
             text = "Rewind and fast forward work only in players that support those keys.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp),
+            modifier = Modifier.padding(top = 2.dp),
         )
     }
 }
@@ -122,7 +123,7 @@ private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
             text = text,
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 4.dp),
+            modifier = Modifier.padding(bottom = 2.dp),
         )
         HorizontalDivider(color = MaterialTheme.colorScheme.outline)
     }

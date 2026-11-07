@@ -32,6 +32,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import io.github.phonemousekeyboard.ui.components.pagePadding
 
 /** The text box keeps this height; longer text scrolls inside it. */
 private val TextBoxHeight = 160.dp
@@ -83,8 +84,8 @@ fun KeyboardScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .pagePadding(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
             text = "Text input",
@@ -140,7 +141,7 @@ fun KeyboardScreen(
                     text = "Start typing…",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(12.dp),
                 )
             }
         }

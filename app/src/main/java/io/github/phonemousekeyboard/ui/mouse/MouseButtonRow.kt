@@ -38,7 +38,7 @@ fun MouseButtonRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(80.dp),
+            .height(64.dp),
     ) {
         MouseButtonPad(
             label = "Left",
