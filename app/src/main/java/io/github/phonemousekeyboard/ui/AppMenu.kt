@@ -22,20 +22,26 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.phonemousekeyboard.bluetooth.ConnectionState
@@ -51,10 +57,12 @@ import io.github.phonemousekeyboard.ui.theme.IdleGrey
  *   │ ● Connected to ZERO      │   connection summary (tap → Bluetooth)
  *   │──────────────────────────│
  *   │ CONTROL                  │
- *   │  🖱 Mouse                │   current page highlighted
- *   │  ⌨ Keyboard             │
- *   │  📱 Air mouse            │
- *   │  ↗ Links                 │
+ *   │  ──────────────────────  │   underline, inset from both sides
+ *   │  🖱 Mouse           [●]  │   current page highlighted; the switch shows or
+ *   │  ⌨ Keyboard        [●]  │   hides the page in the header's swipeable title
+ *   │  📱 Air mouse       [●]  │
+ *   │  ↗ Links           [●]  │
+ *   │  ⏯ Media           [●]  │
  *   │ CONNECT                  │
  *   │  ᛒ Bluetooth            │
  *   │ SETTINGS                 │
@@ -79,12 +87,20 @@ private const val PANEL_WIDTH_FRACTION = 0.75f
 private val ContentInset = 20.dp
 private val ItemOuterInset = 8.dp
 
+/** Height of a menu item: compact, but still comfortable to tap. */
+private val ItemHeight = 38.dp
+
+/** The header switches are shown at this fraction of a normal switch's size. */
+private const val SMALL_SWITCH_SCALE = 0.7f
+
 /** Where the project's source code lives. Shown under About. */
 const val SOURCE_CODE_URL = "https://github.com/Sir-FreezingZero/phone-mouse-keyboard"
 
 /** Everything the menu can do, grouped so [AppMenuContent] doesn't need a long parameter list. */
 data class MenuActions(
     val onNavigate: (Screen) -> Unit,
+    /** Shows or hides a main page in the header's swipeable title. */
+    val onSetPageShown: (page: Screen, isShown: Boolean) -> Unit,
     val onOpenMouseSettings: () -> Unit,
     val onOpenAirMouseSettings: () -> Unit,
     val onOpenKeyboardSettings: () -> Unit,
@@ -114,6 +130,7 @@ fun AppDrawer(
 @Composable
 fun AppMenuContent(
     currentScreen: Screen,
+    hiddenPages: Set<Screen>,
     connectionState: ConnectionState,
     actions: MenuActions,
 ) {
@@ -142,13 +159,25 @@ fun AppMenuContent(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(vertical = 4.dp),
+                .padding(bottom = 4.dp),
         ) {
             MenuSectionLabel("Control")
-            ScreenItem(Screen.MOUSE, AppIcons.Mouse, currentScreen, actions)
-            ScreenItem(Screen.KEYBOARD, AppIcons.Keyboard, currentScreen, actions)
-            ScreenItem(Screen.AIR_MOUSE, AppIcons.AirMouse, currentScreen, actions)
-            ScreenItem(Screen.LINKS, AppIcons.Link, currentScreen, actions)
+            // The last page shown in the header can't be hidden too.
+            val isLastShown = Screen.mainPages.count { it !in hiddenPages } == 1
+            for ((page, icon) in ControlPageIcons) {
+                val isShown = page !in hiddenPages
+                ScreenItem(
+                    screen = page,
+                    icon = icon,
+                    currentScreen = currentScreen,
+                    actions = actions,
+                    headerSwitch = HeaderSwitch(
+                        isShown = isShown,
+                        isEnabled = !(isShown && isLastShown),
+                        onChange = { shown -> actions.onSetPageShown(page, shown) },
+                    ),
+                )
+            }
 
             MenuSectionLabel("Connect")
             ScreenItem(Screen.BLUETOOTH, AppIcons.Bluetooth, currentScreen, actions)
@@ -167,7 +196,7 @@ fun AppMenuContent(
             text = "Version ${appVersionName()}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = ContentInset, vertical = 14.dp),
+            modifier = Modifier.padding(horizontal = ContentInset, vertical = 10.dp),
         )
     }
 }
@@ -179,8 +208,8 @@ private fun MenuHeader(connectionState: ConnectionState, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = ContentInset, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            .padding(horizontal = ContentInset, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(text = "Phone Mouse & Keyboard", style = MaterialTheme.typography.titleMedium)
         Row(
@@ -204,38 +233,106 @@ private fun MenuHeader(connectionState: ConnectionState, onClick: () -> Unit) {
     }
 }
 
+/** A category heading with a thin line under it that stops short of the panel's edges. */
 @Composable
 private fun MenuSectionLabel(text: String) {
-    Text(
-        text = text.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = ContentInset, end = ContentInset, top = 14.dp, bottom = 4.dp),
-    )
+    Column(
+        modifier = Modifier.padding(
+            start = ContentInset,
+            end = ContentInset,
+            top = 10.dp,
+            bottom = 2.dp,
+        ),
+    ) {
+        Text(
+            text = text.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 3.dp),
+        )
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+    }
 }
 
-/** An item that opens one of the app's pages, highlighted while that page is open. */
+/** The main pages listed under Control, with their icons, in header order. */
+private val ControlPageIcons: List<Pair<Screen, ImageVector>> = listOf(
+    Screen.MOUSE to AppIcons.Mouse,
+    Screen.KEYBOARD to AppIcons.Keyboard,
+    Screen.AIR_MOUSE to AppIcons.AirMouse,
+    Screen.LINKS to AppIcons.Link,
+    Screen.MEDIA to AppIcons.Media,
+)
+
+/** The small switch beside a Control item: whether the page appears in the header. */
+private class HeaderSwitch(
+    val isShown: Boolean,
+    val isEnabled: Boolean,
+    val onChange: (Boolean) -> Unit,
+)
+
+/**
+ * An item that opens one of the app's pages, highlighted while that page is open, with an
+ * optional [headerSwitch] on the right.
+ */
 @Composable
 private fun ScreenItem(
     screen: Screen,
     icon: ImageVector,
     currentScreen: Screen,
     actions: MenuActions,
+    headerSwitch: HeaderSwitch? = null,
 ) {
     MenuItem(
         label = screen.title,
         icon = icon,
         isSelected = screen == currentScreen,
         onClick = { actions.onNavigate(screen) },
+        trailing = headerSwitch?.let { switch ->
+            @Composable {
+                SmallSwitch(
+                    checked = switch.isShown,
+                    enabled = switch.isEnabled,
+                    onCheckedChange = switch.onChange,
+                    description = "Show ${screen.title} in the header",
+                )
+            }
+        },
     )
 }
 
-/** An icon and a label. The selected item gets a soft rounded highlight. */
+/**
+ * A switch scaled down to sit inside a menu row without making it taller. Its own touch area
+ * is kept small too, so tapping the rest of the row still opens the page.
+ */
+@Composable
+private fun SmallSwitch(
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    description: String,
+) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled,
+            modifier = Modifier
+                .scale(SMALL_SWITCH_SCALE)
+                .semantics { contentDescription = description },
+        )
+    }
+}
+
+/**
+ * An icon and a label, and optionally something on the right ([trailing]). The selected item
+ * gets a soft rounded highlight.
+ */
 @Composable
 private fun MenuItem(
     label: String,
     icon: ImageVector,
     isSelected: Boolean = false,
+    trailing: (@Composable () -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -246,7 +343,7 @@ private fun MenuItem(
         modifier = Modifier
             .padding(horizontal = ItemOuterInset)
             .fillMaxWidth()
-            .heightIn(min = 44.dp)
+            .heightIn(min = ItemHeight)
             .clip(ItemShape)
             .background(highlight)
             .clickable(role = Role.Button, onClick = onClick)
@@ -260,7 +357,13 @@ private fun MenuItem(
             tint = contentColor,
             modifier = Modifier.size(20.dp),
         )
-        Text(text = label, style = MaterialTheme.typography.bodyLarge, color = contentColor)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = contentColor,
+            modifier = Modifier.weight(1f),
+        )
+        trailing?.invoke()
     }
 }
 

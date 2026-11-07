@@ -104,6 +104,24 @@ class HidInput(
         send(HidDescriptor.KEYBOARD_REPORT_ID, ByteArray(HidDescriptor.KEYBOARD_REPORT_SIZE))
     }
 
+    // ---- Media keys ----
+
+    /**
+     * Holds [key] down until [releaseMediaKey]. Holding Volume up, for example, keeps raising
+     * the volume, just as on a real keyboard.
+     */
+    fun pressMediaKey(key: MediaKey) {
+        val report = ByteArray(HidDescriptor.MEDIA_REPORT_SIZE)
+        report[0] = (key.usage and 0xFF).toByte()
+        report[1] = (key.usage shr 8).toByte()
+        send(HidDescriptor.MEDIA_REPORT_ID, report)
+    }
+
+    /** Lets go of the media key held down. */
+    fun releaseMediaKey() {
+        send(HidDescriptor.MEDIA_REPORT_ID, ByteArray(HidDescriptor.MEDIA_REPORT_SIZE))
+    }
+
     private fun send(reportId: Int, report: ByteArray) {
         transport.sendReport(reportId, report)
         onInputSent()

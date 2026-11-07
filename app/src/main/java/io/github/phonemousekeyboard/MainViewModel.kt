@@ -14,11 +14,14 @@ import io.github.phonemousekeyboard.bluetooth.displayName
 import io.github.phonemousekeyboard.input.HidInput
 import io.github.phonemousekeyboard.input.InputActivity
 import io.github.phonemousekeyboard.input.LinkOpener
+import io.github.phonemousekeyboard.input.MediaKey
 import io.github.phonemousekeyboard.input.MouseButton
 import io.github.phonemousekeyboard.input.SpecialKeys
 import io.github.phonemousekeyboard.input.TextDiff
 import io.github.phonemousekeyboard.input.TypingQueue
 import io.github.phonemousekeyboard.input.UsKeyboardLayout
+import io.github.phonemousekeyboard.ui.PageVisibilityStore
+import io.github.phonemousekeyboard.ui.Screen
 import io.github.phonemousekeyboard.ui.airmouse.AirMouseSettings
 import io.github.phonemousekeyboard.ui.airmouse.AirMouseSettingsStore
 import io.github.phonemousekeyboard.ui.bluetooth.BluetoothUiState
@@ -58,6 +61,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val keyboardSettingsStore = KeyboardSettingsStore(application)
     private val linksStore = LinksStore(application)
     private val linksSettingsStore = LinksSettingsStore(application)
+    private val pageVisibilityStore = PageVisibilityStore(application)
 
     private val typingQueue = TypingQueue(
         scope = viewModelScope,
@@ -123,6 +127,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (!isLinked) connection.connect(device)
         }
     }
+
+    // ---- Pages ----
+
+    /** Main pages hidden from the header's swipeable title. */
+    val hiddenPages: StateFlow<Set<Screen>> = pageVisibilityStore.hiddenPages
+
+    fun setPageShown(page: Screen, isShown: Boolean) = pageVisibilityStore.setShown(page, isShown)
 
     // ---- Mouse ----
 
@@ -227,6 +238,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             waitMillis = settings.waitMillis.toLong(),
         )
     }
+
+    // ---- Media ----
+
+    fun pressMediaKey(key: MediaKey) = input.pressMediaKey(key)
+
+    fun releaseMediaKey() = input.releaseMediaKey()
 
     private fun onInputSent() {
         // Input only reaches the computer while connected; otherwise it isn't "sent".

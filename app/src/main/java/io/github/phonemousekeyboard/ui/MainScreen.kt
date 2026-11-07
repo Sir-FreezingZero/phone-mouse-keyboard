@@ -33,6 +33,7 @@ import io.github.phonemousekeyboard.ui.keyboard.KeyboardSettingsSheet
 import io.github.phonemousekeyboard.ui.links.LinksActions
 import io.github.phonemousekeyboard.ui.links.LinksScreen
 import io.github.phonemousekeyboard.ui.links.LinksSettingsSheet
+import io.github.phonemousekeyboard.ui.media.MediaScreen
 import io.github.phonemousekeyboard.ui.mouse.MouseScreen
 import io.github.phonemousekeyboard.ui.mouse.MouseSettingsSheet
 import kotlinx.coroutines.launch
@@ -64,6 +65,7 @@ fun MainScreen(
     val links by viewModel.links.collectAsStateWithLifecycle()
     val linksSettings by viewModel.linksSettings.collectAsStateWithLifecycle()
     val openingLinkAddress by viewModel.openingLinkAddress.collectAsStateWithLifecycle()
+    val hiddenPages by viewModel.hiddenPages.collectAsStateWithLifecycle()
 
     var currentScreen by rememberSaveable { mutableStateOf(Screen.MOUSE) }
     // Where the back button returns to from a menu page.
@@ -95,6 +97,8 @@ fun MainScreen(
     }
     val menuActions = MenuActions(
         onNavigate = { screen -> closeMenuAnd { navigateTo(screen) } },
+        // Leaves the menu open, so several pages can be switched in one go.
+        onSetPageShown = viewModel::setPageShown,
         onOpenMouseSettings = { closeMenuAnd { isMouseSettingsOpen = true } },
         onOpenAirMouseSettings = { closeMenuAnd { isAirMouseSettingsOpen = true } },
         onOpenKeyboardSettings = { closeMenuAnd { isKeyboardSettingsOpen = true } },
@@ -130,6 +134,7 @@ fun MainScreen(
         drawerContent = {
             AppMenuContent(
                 currentScreen = currentScreen,
+                hiddenPages = hiddenPages,
                 connectionState = connectionState,
                 actions = menuActions,
             )
@@ -139,6 +144,7 @@ fun MainScreen(
             topBar = {
                 AppHeader(
                     currentScreen = currentScreen,
+                    headerPages = shownMainPages(hiddenPages),
                     isConnected = connectionState is ConnectionState.Connected,
                     isSendingInput = isSendingInput,
                     onScreenSelected = navigateTo,
@@ -165,7 +171,7 @@ fun MainScreen(
                             onOpenSettings = { isLinksSettingsOpen = true },
                             onReset = viewModel::resetLinksSettings,
                         )
-                        Screen.BLUETOOTH -> null
+                        Screen.MEDIA, Screen.BLUETOOTH -> null
                     },
                 )
             },
@@ -209,6 +215,13 @@ fun MainScreen(
                     isConnected = connectionState is ConnectionState.Connected,
                     openingAddress = openingLinkAddress,
                     actions = linksActions,
+                    modifier = contentModifier,
+                )
+
+                Screen.MEDIA -> MediaScreen(
+                    vibrateOnPress = mouseSettings.vibrateOnClick,
+                    onPress = viewModel::pressMediaKey,
+                    onRelease = viewModel::releaseMediaKey,
                     modifier = contentModifier,
                 )
 

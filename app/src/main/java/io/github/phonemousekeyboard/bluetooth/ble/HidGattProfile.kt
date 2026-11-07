@@ -62,7 +62,11 @@ internal object HidGattProfile {
     private const val REPORT_TYPE_FEATURE: Byte = 3
 
     /** The input report IDs exposed as Report characteristics, in [HidDescriptor] order. */
-    val INPUT_REPORT_IDS = listOf(HidDescriptor.KEYBOARD_REPORT_ID, HidDescriptor.MOUSE_REPORT_ID)
+    val INPUT_REPORT_IDS = listOf(
+        HidDescriptor.KEYBOARD_REPORT_ID,
+        HidDescriptor.MOUSE_REPORT_ID,
+        HidDescriptor.MEDIA_REPORT_ID,
+    )
 
     // ---- Building the services ----
 

@@ -6,8 +6,9 @@ being controlled: the phone shows up as an ordinary Bluetooth keyboard/mouse.
 
 ## Features
 
-The app has four main pages: Mouse, Keyboard, Air mouse and Links. Swipe the title at the top to move between them;
-the names of the other pages show faintly either side of the current one.
+The app has five main pages: Mouse, Keyboard, Air mouse, Links and Media. Swipe the title at the top to move between them;
+the names of the other pages show faintly either side of the current one. The switches next to
+the pages in the menu choose which ones appear in the title; hidden pages still open from the menu.
 
 The line under the header shows the connection at a glance: grey when nothing is connected,
 green when connected, and blue with ripples running along it while input is being sent.
@@ -45,6 +46,10 @@ green when connected, and blue with ripples running along it while input is bein
   - **⋮ → Links settings:** open in a new tab, a new window, or the Windows Run box (opens the
     default browser even when none is open); Ctrl or Cmd (Mac) for the shortcuts; how long to
     wait for the tab or window before typing.
+- **Media page:** the media keys of a keyboard: play/pause, stop, previous, next, rewind,
+  fast forward, volume down, mute and volume up. Holding a button holds the key, so holding
+  a volume button keeps changing the volume. (Rewind and fast forward only work in players
+  that support those keys.)
 - **Menu → Connect → Bluetooth:** one page for everything connection-related: permissions,
   pairing instructions, and connecting to or disconnecting from a computer.
 
@@ -125,10 +130,12 @@ app/src/main/java/io/github/phonemousekeyboard/
 │   ├── CompassPointing.kt        Point style without a gyroscope (compass + accelerometer)
 │   ├── TiltControl.kt            Tilt style (accelerometer joystick)
 │   ├── LinkOpener.kt             Opens a web address via browser shortcuts and typing
+│   ├── MediaKey.kt               Media keys and their Consumer usage IDs
 │   └── MouseButton.kt
 └── ui/
     ├── MainScreen.kt             Header, current page, menu
     ├── Screen.kt                 All pages, and which ones are main (swipeable) pages
+    ├── PageVisibility.kt         Which main pages appear in the header
     ├── AppHeader.kt              Menu button, title, ⋮ menu
     ├── TitleSwitcher.kt          Swipeable title with faded neighbouring page names
     ├── StatusLine.kt             Glowing header line: connection and input activity
@@ -138,6 +145,7 @@ app/src/main/java/io/github/phonemousekeyboard/
     ├── keyboard/                 Text box page, keyboard settings
     ├── airmouse/                 Air mouse page, illustration, settings
     ├── links/                    Links page, saved links, links settings
+    ├── media/                    Media keys page
     ├── bluetooth/                Bluetooth settings page
     ├── components/               Reusable settings groups, rows and buttons
     └── theme/                    Minimal dark theme
@@ -145,8 +153,9 @@ app/src/main/java/io/github/phonemousekeyboard/
 
 ## Troubleshooting
 
-**Scrolling isn't smooth after updating the app.** Smooth scrolling needs the computer to
-learn about it during pairing. Remove the phone on the computer and pair again once.
+**Media keys or smooth scrolling don't work after updating the app.** The computer learns
+what the phone can send during pairing, and remembers it. Remove the phone on the computer
+and pair again once.
 
 **The computer only sees a phone, not a keyboard/mouse.** The phone presents itself as a
 keyboard/mouse only while *Keyboard & mouse service* says **Ready**. If the computer paired

@@ -101,6 +101,22 @@ object AppIcons {
         }
     }
 
+    /** A play button in a circle, for the Media page. */
+    val Media: ImageVector by lazy {
+        lineIcon("Media") {
+            // Circle, drawn as two half circles.
+            moveTo(3f, 12f)
+            arcTo(9f, 9f, 0f, isMoreThanHalf = false, isPositiveArc = true, x1 = 21f, y1 = 12f)
+            arcTo(9f, 9f, 0f, isMoreThanHalf = false, isPositiveArc = true, x1 = 3f, y1 = 12f)
+            close()
+            // Play triangle, nudged right so it looks centred.
+            moveTo(10f, 8.5f)
+            lineTo(15.5f, 12f)
+            lineTo(10f, 15.5f)
+            close()
+        }
+    }
+
     /** The Bluetooth rune. */
     val Bluetooth: ImageVector by lazy {
         lineIcon("Bluetooth") {

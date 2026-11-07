@@ -3,7 +3,7 @@ package io.github.phonemousekeyboard.bluetooth
 /**
  * The HID report descriptor that tells the host computer what kind of device we are.
  *
- * It describes a composite device with two reports:
+ * It describes a composite device with these reports:
  *
  *  - Report [KEYBOARD_REPORT_ID]: a standard boot-style keyboard
  *      byte 0     modifier bit field (Ctrl, Shift, Alt, GUI — left and right)
@@ -19,6 +19,10 @@ package io.github.phonemousekeyboard.bluetooth
  *  - Feature report [MOUSE_REPORT_ID]: the wheel's "Resolution Multiplier"
  *      byte 0     bits 0-1: 0 = one wheel unit per notch, 1 = [WHEEL_UNITS_PER_NOTCH] units
  *
+ *  - Report [MEDIA_REPORT_ID]: media keys ("Consumer Control")
+ *      bytes 0-1  the media key held down, as a Consumer usage ID (little-endian), or 0 for
+ *                 none; see [io.github.phonemousekeyboard.input.MediaKey]
+ *
  * The Resolution Multiplier is how mice offer smooth, high-resolution scrolling. A computer
  * that supports it (Windows Vista and later, Linux, ...) switches it on by writing 1 to the
  * feature report; from then on each wheel unit is a fraction of a notch.
@@ -29,9 +33,11 @@ object HidDescriptor {
 
     const val KEYBOARD_REPORT_ID = 1
     const val MOUSE_REPORT_ID = 2
+    const val MEDIA_REPORT_ID = 3
 
     const val KEYBOARD_REPORT_SIZE = 8
     const val MOUSE_REPORT_SIZE = 4
+    const val MEDIA_REPORT_SIZE = 2
 
     /** Wheel units per notch once the computer has enabled high-resolution scrolling. */
     const val WHEEL_UNITS_PER_NOTCH = 16
@@ -111,12 +117,27 @@ object HidDescriptor {
         0xC0,                           //     End Collection
         0xC0,                           //   End Collection
         0xC0,                           // End Collection
+
+        // ---- Media keys ----
+        0x05, 0x0C,                     // Usage Page (Consumer)
+        0x09, 0x01,                     // Usage (Consumer Control)
+        0xA1, 0x01,                     // Collection (Application)
+        0x85, MEDIA_REPORT_ID,          //   Report ID
+        0x19, 0x00,                     //   Usage Minimum (0)
+        0x2A, 0xFF, 0x03,               //   Usage Maximum (0x3FF)
+        0x15, 0x00,                     //   Logical Minimum (0)
+        0x26, 0xFF, 0x03,               //   Logical Maximum (0x3FF)
+        0x75, 0x10,                     //   Report Size (16 bits)
+        0x95, 0x01,                     //   Report Count (1)
+        0x81, 0x00,                     //   Input (Data, Array) — the key held down
+        0xC0,                           // End Collection
     )
 
     /** A report meaning "nothing pressed, nothing moved" for [reportId], or null if unknown. */
     fun emptyReport(reportId: Int): ByteArray? = when (reportId) {
         KEYBOARD_REPORT_ID -> ByteArray(KEYBOARD_REPORT_SIZE)
         MOUSE_REPORT_ID -> ByteArray(MOUSE_REPORT_SIZE)
+        MEDIA_REPORT_ID -> ByteArray(MEDIA_REPORT_SIZE)
         else -> null
     }
 

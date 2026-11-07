@@ -21,6 +21,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -34,12 +35,13 @@ import androidx.compose.ui.unit.dp
  *   [menu]            Page title             [⋮]      ([←] instead of [menu] on menu pages)
  *   ──────────────═══════════──────────────        status line
  *
- * On main pages the title can be swiped to move between them ([TitleSwitcher]); other pages
- * show a plain title. The [StatusLine] underneath shows the connection and input activity.
+ * On main pages shown in the header ([headerPages]) the title can be swiped to move between
+ * them ([TitleSwitcher]); other pages show a plain title. The [StatusLine] underneath shows the connection and input activity.
  */
 @Composable
 fun AppHeader(
     currentScreen: Screen,
+    headerPages: List<Screen>,
     isConnected: Boolean,
     isSendingInput: Boolean,
     onScreenSelected: (Screen) -> Unit,
@@ -77,13 +79,16 @@ fun AppHeader(
                     .fillMaxHeight(),
                 contentAlignment = Alignment.Center,
             ) {
-                if (currentScreen.isMainPage) {
-                    TitleSwitcher(
-                        pages = Screen.mainPages,
-                        currentPage = currentScreen,
-                        onPageSelected = onScreenSelected,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                if (currentScreen in headerPages) {
+                    // Rebuilt when pages are shown or hidden, so swiping follows the new list.
+                    key(headerPages) {
+                        TitleSwitcher(
+                            pages = headerPages,
+                            currentPage = currentScreen,
+                            onPageSelected = onScreenSelected,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                 } else {
                     PageTitle(title = currentScreen.title)
                 }
