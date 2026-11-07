@@ -5,6 +5,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -294,6 +296,7 @@ fun SliderRow(
  *
  * @param detail explains the selected option, shown under the chips.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun <T> ChoiceRow(
     title: String,
@@ -312,9 +315,11 @@ fun <T> ChoiceRow(
         Text(text = title, style = MaterialTheme.typography.bodyMedium)
         // The chips are 32 dp tall; without this each would reserve 48 dp of height to tap.
         CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-            Row(
+            // Wraps onto a second line if the chips don't fit across.
+            FlowRow(
                 modifier = Modifier.padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 options.forEach { option ->
                     FilterChip(

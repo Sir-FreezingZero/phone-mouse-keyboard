@@ -10,17 +10,18 @@ import kotlinx.coroutines.launch
 
 /** Where a link opens on the computer. */
 enum class LinkTarget {
+    /**
+     * Windows key + R: the Run box, which hands the address to the default browser. Works
+     * whatever program is in front: an open browser gets a new tab, and a closed one is
+     * started. Windows only.
+     */
+    DEFAULT_BROWSER,
+
     /** Ctrl+T: a new tab in the browser window that's in front. */
     NEW_TAB,
 
     /** Ctrl+N: a new window of the browser that's in front. */
     NEW_WINDOW,
-
-    /**
-     * Windows key + R: the Run box, which opens the address in the default browser, starting
-     * the browser if it isn't open. Windows only.
-     */
-    RUN_BOX,
 }
 
 /** The key that browser shortcuts are pressed with. */
@@ -81,10 +82,10 @@ class LinkOpener(
         const val KEY_T = 0x17
 
         fun shortcutFor(target: LinkTarget, shortcutKey: ShortcutKey): KeyStroke = when (target) {
+            // The Run box is always the Windows key, whatever the shortcut key setting.
+            LinkTarget.DEFAULT_BROWSER -> KeyStroke(KEY_R, Modifier.LEFT_GUI)
             LinkTarget.NEW_TAB -> KeyStroke(KEY_T, shortcutKey.modifier)
             LinkTarget.NEW_WINDOW -> KeyStroke(KEY_N, shortcutKey.modifier)
-            // The Run box is always the Windows key, whatever the shortcut key setting.
-            LinkTarget.RUN_BOX -> KeyStroke(KEY_R, Modifier.LEFT_GUI)
         }
     }
 }

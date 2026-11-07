@@ -95,7 +95,7 @@ private fun OpeningGroup(
             detail = targetDetail(settings),
         )
         // The Run box always uses the Windows key, so this choice doesn't apply to it.
-        if (settings.target != LinkTarget.RUN_BOX) {
+        if (settings.target != LinkTarget.DEFAULT_BROWSER) {
             GroupDivider()
             ChoiceRow(
                 title = "Shortcut key",
@@ -135,9 +135,9 @@ private fun TimingGroup(
 }
 
 private fun targetLabel(target: LinkTarget): String = when (target) {
+    LinkTarget.DEFAULT_BROWSER -> "Default browser"
     LinkTarget.NEW_TAB -> "New tab"
     LinkTarget.NEW_WINDOW -> "New window"
-    LinkTarget.RUN_BOX -> "Run box"
 }
 
 private fun shortcutKeyLabel(key: ShortcutKey): String = when (key) {
@@ -149,12 +149,14 @@ private fun shortcutKeyLabel(key: ShortcutKey): String = when (key) {
 private fun targetDetail(settings: LinksSettings): String {
     val key = shortcutKeyLabel(settings.shortcutKey).substringBefore(" ")
     return when (settings.target) {
+        LinkTarget.DEFAULT_BROWSER ->
+            "Windows. Works from any program: opens a new tab in your browser, or starts " +
+                "the browser if it's closed. (Uses the Run box: Windows+R.)"
         LinkTarget.NEW_TAB ->
-            "Presses $key+T, so a browser window must be the one in front on the computer."
+            "Presses $key+T, so a browser must be the window in front. Use this on a Mac " +
+                "or Linux."
         LinkTarget.NEW_WINDOW ->
-            "Presses $key+N, so a browser window must be the one in front on the computer."
-        LinkTarget.RUN_BOX ->
-            "Windows only. Presses Windows+R and opens the link in the default browser, " +
-                "starting it if it isn't open. Works whatever window is in front."
+            "Presses $key+N, so a browser must be the window in front. Use this on a Mac " +
+                "or Linux."
     }
 }

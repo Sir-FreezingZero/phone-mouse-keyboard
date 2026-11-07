@@ -10,8 +10,11 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /** How links are opened on the computer. Changed from the Links page's ⋮ menu. */
 data class LinksSettings(
-    /** A new tab, a new window, or the Windows Run box. */
-    val target: LinkTarget = LinkTarget.NEW_TAB,
+    /**
+     * The default browser (via the Windows Run box, from any program), or a new tab or window
+     * of the browser in front.
+     */
+    val target: LinkTarget = LinkTarget.DEFAULT_BROWSER,
     /** Ctrl, or ⌘ Command for a Mac. */
     val shortcutKey: ShortcutKey = ShortcutKey.CTRL,
     /** How long to wait for the new tab or window to appear before typing the address. */
@@ -43,7 +46,11 @@ class LinksSettingsStore(context: Context) {
         val defaults = LinksSettings()
         return with(preferences) {
             LinksSettings(
-                target = enumOrDefault(getString(KEY_TARGET, null), defaults.target),
+                // "RUN_BOX" was the default browser option's earlier name.
+                target = enumOrDefault(
+                    getString(KEY_TARGET, null)?.replace("RUN_BOX", LinkTarget.DEFAULT_BROWSER.name),
+                    defaults.target,
+                ),
                 shortcutKey = enumOrDefault(getString(KEY_SHORTCUT_KEY, null), defaults.shortcutKey),
                 waitMillis = getInt(KEY_WAIT, defaults.waitMillis),
             )

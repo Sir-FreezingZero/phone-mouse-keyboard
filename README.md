@@ -40,12 +40,17 @@ green when connected, and blue with ripples running along it while input is bein
   style is picked automatically (Point with a gyroscope, otherwise Tilt) until you choose one.
   - **⋮ → Air mouse settings:** style, speed, steadiness (ignores hand tremor), smoothing,
     move only while touching, invert either direction.
-- **Links page:** saved web pages. Tap one and the computer opens it: the app presses Ctrl+T
-  (new tab) or Ctrl+N (new window), types the address and presses Enter, so nothing needs
-  installing on the computer. Each link's ⋮ edits, moves or deletes it.
-  - **⋮ → Links settings:** open in a new tab, a new window, or the Windows Run box (opens the
-    default browser even when none is open); Ctrl or Cmd (Mac) for the shortcuts; how long to
-    wait for the tab or window before typing.
+- **Links page:** saved web pages. Tap one and the computer opens it, using only key
+  presses, so nothing needs installing on the computer. Each link's ⋮ edits, moves or deletes
+  it.
+  - **⋮ → Links settings:** where links open:
+    - **Default browser** (Windows, the default): works from any program. Presses Windows+R,
+      types the address and presses Enter; Windows opens it in a new tab of your browser, or
+      starts the browser if it's closed.
+    - **New tab** / **New window**: presses Ctrl+T / Ctrl+N (or Cmd on a Mac) in the browser
+      that's in front, then types the address. For Mac and Linux.
+
+    Also: how long to wait for the tab, window or Run box before typing.
 - **Media page:** the media keys of a keyboard: play/pause, stop, previous, next, rewind,
   fast forward, volume down, mute and volume up. Holding a button holds the key, so holding
   a volume button keeps changing the volume. (Rewind and fast forward only work in players

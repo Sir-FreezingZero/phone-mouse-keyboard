@@ -212,6 +212,7 @@ fun MainScreen(
 
                 Screen.LINKS -> LinksScreen(
                     links = links,
+                    target = linksSettings.target,
                     isConnected = connectionState is ConnectionState.Connected,
                     openingAddress = openingLinkAddress,
                     actions = linksActions,
