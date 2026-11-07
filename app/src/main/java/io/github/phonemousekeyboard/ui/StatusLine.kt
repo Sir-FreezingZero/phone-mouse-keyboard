@@ -14,14 +14,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.phonemousekeyboard.ui.theme.ActiveBlue
 import io.github.phonemousekeyboard.ui.theme.ConnectedGreen
 import io.github.phonemousekeyboard.ui.theme.IdleGrey
+import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.pow
@@ -29,8 +30,11 @@ import kotlin.math.sin
 
 private val LineHeight = 2.dp
 
-/** The line is drawn as this many short pieces, each with its own brightness. */
-private const val SEGMENTS = 120
+/**
+ * The line is drawn as one smooth gradient through this many colour stops. Enough that the
+ * ripples look smooth; a single gradient has no seams between pieces.
+ */
+private const val GRADIENT_STOPS = 61
 
 /** Brightness at the very ends of the line, where it is dimmest. */
 private const val EDGE_BRIGHTNESS = 0.12f
@@ -38,9 +42,18 @@ private const val EDGE_BRIGHTNESS = 0.12f
 /** How sharply the brightness rises towards the centre. Higher = narrower glow. */
 private const val GLOW_SHARPNESS = 1.6f
 
+/**
+ * Each point's brightness is raised to this power. Below 1 lights more of the line, while the
+ * centre stays the brightest (1 would be the original, dimmer look).
+ */
+private const val BRIGHTNESS_POWER = 0.725f
+
 /** While input is being sent: how many ripples fit across the line, and how fast they run. */
 private const val RIPPLES_ACROSS_LINE = 5f
 private const val RIPPLE_PERIOD_MILLIS = 900
+
+/** Pause between ripple updates: about 30 updates a second, smooth but light on the battery. */
+private const val RIPPLE_UPDATE_DELAY_MILLIS = 25L
 
 private const val TRANSITION_MILLIS = 300
 
@@ -77,14 +90,15 @@ fun StatusLine(
         label = "status line waviness",
     )
 
-    // The ripples' position along the line, 0 to 1. Only animated while they're visible,
-    // so the line costs nothing when idle.
+    // The ripples' position along the line, 0 to 1. Only animated while they're visible, so
+    // the line costs nothing when idle.
     var ripplePhase by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(isWaving) {
         while (isWaving) {
             withFrameMillis { frameMillis ->
                 ripplePhase = (frameMillis % RIPPLE_PERIOD_MILLIS) / RIPPLE_PERIOD_MILLIS.toFloat()
             }
+            delay(RIPPLE_UPDATE_DELAY_MILLIS)
         }
     }
 
@@ -98,18 +112,15 @@ fun StatusLine(
         modifier = modifier
             .fillMaxWidth()
             .height(LineHeight)
+            // Its own layer, so the animation redraws only the line, not the header around it.
+            .graphicsLayer()
             .semantics { contentDescription = description },
     ) {
-        val segmentWidth = size.width / SEGMENTS
-        for (index in 0 until SEGMENTS) {
-            val position = (index + 0.5f) / SEGMENTS
-            drawRect(
-                color = color.copy(alpha = brightnessAt(position, ripplePhase, waviness)),
-                topLeft = Offset(index * segmentWidth, 0f),
-                // A hair wider than needed, so no gaps show between pieces.
-                size = Size(segmentWidth + 1f, size.height),
-            )
+        val colorStops = Array(GRADIENT_STOPS) { index ->
+            val position = index / (GRADIENT_STOPS - 1f)
+            position to color.copy(alpha = brightnessAt(position, ripplePhase, waviness))
         }
+        drawRect(Brush.horizontalGradient(*colorStops))
     }
 }
 
@@ -124,5 +135,6 @@ private fun brightnessAt(position: Float, ripplePhase: Float, waviness: Float): 
     val ripple = 0.5f + 0.5f * sin(2f * PI.toFloat() * (position * RIPPLES_ACROSS_LINE - ripplePhase))
     val rippleFactor = 1f - waviness + waviness * (0.35f + 0.65f * ripple)
 
-    return EDGE_BRIGHTNESS + (1f - EDGE_BRIGHTNESS) * glow * rippleFactor
+    val brightness = EDGE_BRIGHTNESS + (1f - EDGE_BRIGHTNESS) * glow * rippleFactor
+    return brightness.pow(BRIGHTNESS_POWER)
 }
