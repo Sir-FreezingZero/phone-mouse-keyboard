@@ -17,11 +17,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.phonemousekeyboard.MainViewModel
 import io.github.phonemousekeyboard.PermissionStatus
 import io.github.phonemousekeyboard.bluetooth.ConnectionState
+import io.github.phonemousekeyboard.input.AirMouseSensors
 import io.github.phonemousekeyboard.ui.airmouse.AirMouseScreen
 import io.github.phonemousekeyboard.ui.airmouse.AirMouseSettingsSheet
 import io.github.phonemousekeyboard.ui.bluetooth.BluetoothActions
@@ -63,6 +65,9 @@ fun MainScreen(
 
     var isMouseSettingsOpen by rememberSaveable { mutableStateOf(false) }
     var isAirMouseSettingsOpen by rememberSaveable { mutableStateOf(false) }
+    // Only used to describe which Air mouse styles this phone supports.
+    val context = LocalContext.current
+    val airMouseSensors = remember(context) { AirMouseSensors(context) }
     var isKeyboardSettingsOpen by rememberSaveable { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -199,6 +204,8 @@ fun MainScreen(
     if (isAirMouseSettingsOpen) {
         AirMouseSettingsSheet(
             settings = airMouseSettings,
+            hasGyroscope = airMouseSensors.hasGyroscope,
+            hasCompass = airMouseSensors.hasCompass,
             onChange = viewModel::updateAirMouseSettings,
             onReset = viewModel::resetAirMouseSettings,
             onDismiss = { isAirMouseSettingsOpen = false },

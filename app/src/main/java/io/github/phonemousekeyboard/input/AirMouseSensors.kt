@@ -7,43 +7,52 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 
 /**
- * The phone sensors the Air mouse reads: the gyroscope for rotation, and gravity to know
- * which way is up. Phones without a dedicated gravity sensor fall back to the
- * accelerometer, which measures gravity too while the phone is held fairly still.
- *
+ * The phone sensors the Air mouse can read, and which [AirMouseMethod]s they make possible.
  * Readings are delivered on the main thread.
  */
 class AirMouseSensors(context: Context) {
 
     private val sensorManager = context.getSystemService(SensorManager::class.java)
-    private val gyroscope: Sensor? = sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-    private val gravity: Sensor? = sensorManager?.getDefaultSensor(Sensor.TYPE_GRAVITY)
-        ?: sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
-    /** Without a gyroscope there is no Air mouse. */
-    val isAvailable: Boolean get() = gyroscope != null
+    private val gyroscope = sensor(Sensor.TYPE_GYROSCOPE)
+    private val gravity = sensor(Sensor.TYPE_GRAVITY)
+    private val accelerometer = sensor(Sensor.TYPE_ACCELEROMETER)
+    private val magnetometer = sensor(Sensor.TYPE_MAGNETIC_FIELD)
+
+    val hasGyroscope: Boolean get() = gyroscope != null
+    val hasCompass: Boolean get() = magnetometer != null && accelerometer != null
+    val hasAccelerometer: Boolean get() = accelerometer != null
 
     private var listener: SensorEventListener? = null
 
     /**
-     * Starts delivering readings: [onGravity] with the gravity direction and [onRotation]
-     * with rotation rates in radians per second around the phone's x, y and z axes.
+     * The best way to point at the screen on this phone: the gyroscope if there is one,
+     * otherwise the compass. Null if neither is available.
      */
-    fun start(
-        onGravity: (x: Float, y: Float, z: Float) -> Unit,
-        onRotation: (x: Float, y: Float, z: Float, timestampNanos: Long) -> Unit,
-    ) {
+    val pointingMethod: AirMouseMethod?
+        get() = when {
+            hasGyroscope -> AirMouseMethod.GYROSCOPE_POINTING
+            hasCompass -> AirMouseMethod.COMPASS_POINTING
+            else -> null
+        }
+
+    /** Starts delivering the readings [method] needs to [onReading]. */
+    fun start(method: AirMouseMethod, onReading: (SensorReading) -> Unit) {
         stop()
         val manager = sensorManager ?: return
-        val gyroscope = gyroscope ?: return
 
         val newListener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
-                val (x, y, z) = Triple(event.values[0], event.values[1], event.values[2])
-                when (event.sensor.type) {
-                    Sensor.TYPE_GYROSCOPE -> onRotation(x, y, z, event.timestamp)
-                    else -> onGravity(x, y, z)
+                val kind = when (event.sensor.type) {
+                    Sensor.TYPE_GYROSCOPE -> SensorKind.GYROSCOPE
+                    Sensor.TYPE_GRAVITY -> SensorKind.GRAVITY
+                    Sensor.TYPE_ACCELEROMETER -> SensorKind.ACCELEROMETER
+                    Sensor.TYPE_MAGNETIC_FIELD -> SensorKind.MAGNETOMETER
+                    else -> return
                 }
+                onReading(
+                    SensorReading(kind, event.values[0], event.values[1], event.values[2], event.timestamp),
+                )
             }
 
             override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) = Unit
@@ -51,12 +60,24 @@ class AirMouseSensors(context: Context) {
         listener = newListener
 
         // "Game" rate (about 50 readings a second) is smooth without flooding Bluetooth.
-        manager.registerListener(newListener, gyroscope, SensorManager.SENSOR_DELAY_GAME)
-        gravity?.let { manager.registerListener(newListener, it, SensorManager.SENSOR_DELAY_GAME) }
+        sensorsFor(method).forEach { sensor ->
+            manager.registerListener(newListener, sensor, SensorManager.SENSOR_DELAY_GAME)
+        }
     }
 
     fun stop() {
         listener?.let { sensorManager?.unregisterListener(it) }
         listener = null
     }
+
+    private fun sensorsFor(method: AirMouseMethod): List<Sensor> = when (method) {
+        // Gravity tells which way is up; the accelerometer is a fine stand-in.
+        AirMouseMethod.GYROSCOPE_POINTING -> listOfNotNull(gyroscope, gravity ?: accelerometer)
+        AirMouseMethod.COMPASS_POINTING -> listOfNotNull(accelerometer, magnetometer)
+        // The raw accelerometer: on phones without a gyroscope, "gravity" is often only an
+        // estimate built from it anyway.
+        AirMouseMethod.TILT -> listOfNotNull(accelerometer)
+    }
+
+    private fun sensor(type: Int): Sensor? = sensorManager?.getDefaultSensor(type)
 }

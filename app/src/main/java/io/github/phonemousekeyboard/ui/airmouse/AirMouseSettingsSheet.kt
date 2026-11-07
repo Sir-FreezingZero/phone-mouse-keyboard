@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import io.github.phonemousekeyboard.ui.components.ChoiceRow
 import io.github.phonemousekeyboard.ui.components.GroupDivider
 import io.github.phonemousekeyboard.ui.components.GroupTitleButton
 import io.github.phonemousekeyboard.ui.components.SettingsGroup
@@ -34,6 +35,8 @@ import kotlin.math.roundToInt
 @Composable
 fun AirMouseSettingsSheet(
     settings: AirMouseSettings,
+    hasGyroscope: Boolean,
+    hasCompass: Boolean,
     onChange: ((AirMouseSettings) -> AirMouseSettings) -> Unit,
     onReset: () -> Unit,
     onDismiss: () -> Unit,
@@ -65,9 +68,42 @@ fun AirMouseSettingsSheet(
                 GroupTitleButton(label = "Reset", onClick = onReset)
             }
 
+            StyleGroup(settings, hasGyroscope, hasCompass, onChange)
             MovementGroup(settings, onChange)
             DirectionGroup(settings, onChange)
         }
+    }
+}
+
+@Composable
+private fun StyleGroup(
+    settings: AirMouseSettings,
+    hasGyroscope: Boolean,
+    hasCompass: Boolean,
+    onChange: ((AirMouseSettings) -> AirMouseSettings) -> Unit,
+) {
+    val style = settings.effectiveStyle(hasGyroscope)
+    val detail = when (style) {
+        AirMouseStyle.POINT -> when {
+            hasGyroscope -> "Aim the top of the phone at the screen; turn and tilt to move."
+            hasCompass -> "Aim the top of the phone at the screen; turn and tilt to move. " +
+                "This phone has no gyroscope, so pointing uses the compass: less precise, " +
+                "and thrown off by metal and magnets. Tilt may work better."
+            else -> "This phone can't point (no gyroscope or compass), so Tilt is used."
+        }
+        AirMouseStyle.TILT -> "Tip the phone like a joystick; the further you tip it, the " +
+            "faster the pointer moves. Recenter sets what counts as level."
+    }
+
+    SettingsGroup(title = "Style") {
+        ChoiceRow(
+            title = "How to move the pointer",
+            options = AirMouseStyle.entries,
+            selected = style,
+            label = AirMouseStyle::label,
+            onSelect = { chosen -> onChange { it.copy(style = chosen) } },
+            detail = detail,
+        )
     }
 }
 

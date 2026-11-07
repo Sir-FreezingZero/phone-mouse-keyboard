@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -34,8 +35,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
-import io.github.phonemousekeyboard.input.AirMotionProcessor
+import io.github.phonemousekeyboard.input.AirMotionSettings
+import io.github.phonemousekeyboard.input.AirMouseController
+import io.github.phonemousekeyboard.input.AirMouseMethod
 import io.github.phonemousekeyboard.input.AirMouseSensors
+import io.github.phonemousekeyboard.input.TiltControl
 import io.github.phonemousekeyboard.input.MouseButton
 import io.github.phonemousekeyboard.ui.mouse.FractionalAccumulator
 import io.github.phonemousekeyboard.ui.mouse.MouseButtonRow
@@ -56,7 +60,8 @@ private val UnitShape = RoundedCornerShape(8.dp)
  *   │    Left     │    Right    │
  *   ╰─────────────┴─────────────╯
  *
- * Sensors only run while this page is visible, the app is in front, and the Air mouse isn't
+ * How phone movement is read depends on the chosen style and the phone's sensors, see
+ * [AirMouseMethod]. Sensors only run while this page is visible, the app is in front, and the Air mouse isn't
  * paused (or, with "move only while touching", while a finger is on the page).
  */
 @Composable
@@ -70,7 +75,8 @@ fun AirMouseScreen(
 ) {
     val context = LocalContext.current
     val sensors = remember(context) { AirMouseSensors(context) }
-    val processor = remember { AirMotionProcessor() }
+    val method = remember(sensors, settings.style) { methodFor(settings, sensors) }
+    val controller = remember(method) { method?.let(AirMouseController::create) }
     val illustration = remember { AirMouseIllustrationState() }
     val xAccumulator = remember { FractionalAccumulator() }
     val yAccumulator = remember { FractionalAccumulator() }
@@ -79,7 +85,7 @@ fun AirMouseScreen(
     var isTouching by remember { mutableStateOf(false) }
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
 
-    val isActive = sensors.isAvailable &&
+    val isActive = controller != null &&
         lifecycleState.isAtLeast(Lifecycle.State.RESUMED) &&
         !isPaused &&
         (!settings.moveOnlyWhileTouching || isTouching)
@@ -88,27 +94,21 @@ fun AirMouseScreen(
     val currentSettings by rememberUpdatedState(settings)
     val currentOnMove by rememberUpdatedState(onMove)
 
-    DisposableEffect(isActive) {
-        if (isActive) {
-            sensors.start(
-                onGravity = processor::onGravity,
-                onRotation = { x, y, z, timestamp ->
-                    val motion = processor.onRotation(
-                        x, y, z, timestamp,
-                        currentSettings.toProcessorSettings(),
-                    )
-                    if (motion != null) {
-                        illustration.onMotion(motion)
-                        val stepX = xAccumulator.add(motion.dx)
-                        val stepY = yAccumulator.add(motion.dy)
-                        if (stepX != 0 || stepY != 0) currentOnMove(stepX, stepY)
-                    }
-                },
-            )
+    DisposableEffect(isActive, controller) {
+        if (isActive && method != null && controller != null) {
+            sensors.start(method) { reading ->
+                val motion = controller.onReading(reading, currentSettings.toMotionSettings())
+                if (motion != null) {
+                    illustration.onMotion(motion)
+                    val stepX = xAccumulator.add(motion.dx)
+                    val stepY = yAccumulator.add(motion.dy)
+                    if (stepX != 0 || stepY != 0) currentOnMove(stepX, stepY)
+                }
+            }
         }
         onDispose {
             sensors.stop()
-            processor.reset()
+            controller?.reset()
             illustration.settle()
         }
     }
@@ -130,7 +130,7 @@ fun AirMouseScreen(
                 .fillMaxWidth()
                 .detectHolding { holding -> isTouching = holding },
         ) {
-            if (sensors.isAvailable) {
+            if (method != null) {
                 AirMouseIllustration(
                     state = illustration,
                     isActive = isActive,
@@ -138,20 +138,25 @@ fun AirMouseScreen(
                     cursorColor = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.fillMaxSize(),
                 )
-                Hint(modifier = Modifier.align(Alignment.TopStart))
-                TextButton(
-                    onClick = { isPaused = !isPaused },
-                    modifier = Modifier.align(Alignment.TopEnd),
-                ) {
-                    Text(if (isPaused) "Resume" else "Pause")
+                Hint(method = method, modifier = Modifier.align(Alignment.TopStart))
+                Row(modifier = Modifier.align(Alignment.TopEnd)) {
+                    // Tilt measures from a "level" position; let the user reset it at will.
+                    if (controller is TiltControl) {
+                        TextButton(onClick = controller::recenter, enabled = isActive) {
+                            Text("Recenter")
+                        }
+                    }
+                    TextButton(onClick = { isPaused = !isPaused }) {
+                        Text(if (isPaused) "Resume" else "Pause")
+                    }
                 }
                 StatusText(
-                    text = statusText(settings, isPaused, isActive, illustration),
+                    text = statusText(method, settings, isPaused, isActive, illustration),
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             } else {
                 StatusText(
-                    text = "This phone has no gyroscope, so the Air mouse can't work on it.",
+                    text = "This phone has no motion sensors the Air mouse can use.",
                     modifier = Modifier.align(Alignment.Center),
                 )
             }
@@ -170,12 +175,22 @@ fun AirMouseScreen(
 }
 
 @Composable
-private fun Hint(modifier: Modifier = Modifier) {
+private fun Hint(method: AirMouseMethod, modifier: Modifier = Modifier) {
+    val text = when (method) {
+        AirMouseMethod.GYROSCOPE_POINTING ->
+            "Point the top of the phone at the screen.\nTurn to move sideways, tilt to move up and down."
+        AirMouseMethod.COMPASS_POINTING ->
+            "Point the top of the phone at the screen.\nTurn and tilt to move. Uses the compass: " +
+                "keep away from metal and magnets."
+        AirMouseMethod.TILT ->
+            "Tip the phone like a joystick.\nThe further you tip it, the faster the pointer moves."
+    }
     Text(
-        text = "Point the top of the phone at the screen.\nTurn to move sideways, tilt to move up and down.",
+        text = text,
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier.padding(start = 12.dp, top = 12.dp, end = 88.dp),
+        // Leaves room on the right for the Recenter and Pause buttons.
+        modifier = modifier.padding(start = 12.dp, top = 12.dp, end = 176.dp),
     )
 }
 
@@ -192,20 +207,40 @@ private fun StatusText(text: String, modifier: Modifier = Modifier) {
 
 /** The line under the illustration: live readings while moving, otherwise what to do. */
 private fun statusText(
+    method: AirMouseMethod,
     settings: AirMouseSettings,
     isPaused: Boolean,
     isActive: Boolean,
     illustration: AirMouseIllustrationState,
-): String = when {
-    isPaused -> "Paused"
-    !isActive && settings.moveOnlyWhileTouching -> "Touch and hold here to move the pointer"
-    !isActive -> "Waiting…"
-    else -> String.format(
-        Locale.US,
-        "Turn %+.0f°/s  ·  Tilt %+.0f°/s",
-        illustration.turnDegreesPerSecond,
-        illustration.tiltDegreesPerSecond,
-    )
+): String {
+    val format = when (method) {
+        AirMouseMethod.GYROSCOPE_POINTING,
+        AirMouseMethod.COMPASS_POINTING -> "Turn %+.0f°/s  ·  Tilt %+.0f°/s"
+        AirMouseMethod.TILT -> "Sideways %+.0f°  ·  Forward %+.0f°"
+    }
+    return when {
+        isPaused -> "Paused"
+        !isActive && settings.moveOnlyWhileTouching -> "Touch and hold here to move the pointer"
+        !isActive -> "Waiting…"
+        else -> String.format(
+            Locale.US,
+            format,
+            illustration.horizontalReading,
+            illustration.verticalReading,
+        )
+    }
+}
+
+/**
+ * The method for the chosen style on this phone. Falls back to the other style if this phone
+ * lacks the sensors for the chosen one; null if it has none of them.
+ */
+private fun methodFor(settings: AirMouseSettings, sensors: AirMouseSensors): AirMouseMethod? {
+    val tilt = AirMouseMethod.TILT.takeIf { sensors.hasAccelerometer }
+    return when (settings.effectiveStyle(sensors.hasGyroscope)) {
+        AirMouseStyle.POINT -> sensors.pointingMethod ?: tilt
+        AirMouseStyle.TILT -> tilt ?: sensors.pointingMethod
+    }
 }
 
 /** Reports whether any finger is on this element, without taking the touches away from children. */
@@ -221,7 +256,7 @@ private fun Modifier.detectHolding(onHoldingChanged: (Boolean) -> Unit): Modifie
         }
     }
 
-private fun AirMouseSettings.toProcessorSettings() = AirMotionProcessor.Settings(
+private fun AirMouseSettings.toMotionSettings() = AirMotionSettings(
     speed = speed,
     steadiness = steadiness,
     smoothing = smoothing,

@@ -1,25 +1,11 @@
 package io.github.phonemousekeyboard.input
 
-import kotlin.math.abs
-import kotlin.math.sign
 import kotlin.math.sqrt
 
 /**
- * One step of Air mouse movement.
- *
- * @param turnRate rotation left/right around the vertical axis, radians per second.
- *   Positive is turning left.
- * @param tiltRate rotation up/down around the phone's left-right axis, radians per second.
- *   Positive is tilting the top up.
- * @param dx pointer movement to send, in pointer units (positive = right).
- * @param dy pointer movement to send, in pointer units (positive = down).
- */
-data class AirMotion(val turnRate: Float, val tiltRate: Float, val dx: Float, val dy: Float)
-
-/**
- * Turns gyroscope readings into pointer movement, the way a TV-remote air mouse works:
- * turning the phone left/right moves the pointer sideways, tilting it up/down moves it
- * vertically.
+ * The maths behind "point the phone at the screen", shared by [GyroscopePointing] and
+ * [CompassPointing]: turning the phone left/right moves the pointer sideways, tilting it
+ * up/down moves it vertically.
  *
  * "Left/right" is measured around the real vertical axis, worked out from gravity. That
  * keeps it right whether the phone is held flat like a remote or upright like a camera.
@@ -28,9 +14,9 @@ data class AirMotion(val turnRate: Float, val tiltRate: Float, val dx: Float, va
  *
  * Pure arithmetic with no Android dependencies, so it can be unit tested.
  */
-class AirMotionProcessor {
+class PointingProcessor {
 
-    /** Latest gravity direction in phone coordinates, normalised. Starts as "lying flat". */
+    /** Latest "up" direction in phone coordinates, normalised. Starts as "lying flat". */
     private var upX = 0f
     private var upY = 0f
     private var upZ = 1f
@@ -52,8 +38,8 @@ class AirMotionProcessor {
     }
 
     /**
-     * Processes one gyroscope reading (radians per second around the phone's x, y and z axes)
-     * taken at [timestampNanos]. Returns the movement to send, or null for the very first
+     * Processes one rotation rate (radians per second around the phone's x, y and z axes)
+     * measured at [timestampNanos]. Returns the movement to send, or null for the very first
      * reading, which only sets the starting time.
      */
     fun onRotation(
@@ -61,7 +47,7 @@ class AirMotionProcessor {
         rateY: Float,
         rateZ: Float,
         timestampNanos: Long,
-        settings: Settings,
+        settings: AirMotionSettings,
     ): AirMotion? {
         val previous = lastTimestampNanos
         lastTimestampNanos = timestampNanos
@@ -76,45 +62,28 @@ class AirMotionProcessor {
         val tilt = rateX
 
         val keep = settings.smoothing.coerceIn(0f, MAX_SMOOTHING)
-        smoothedTurn = smoothedTurn * keep + turn * (1f - keep)
-        smoothedTilt = smoothedTilt * keep + tilt * (1f - keep)
+        smoothedTurn = smooth(smoothedTurn, turn, keep)
+        smoothedTilt = smooth(smoothedTilt, tilt, keep)
 
         val deadZone = settings.steadiness.coerceIn(0f, 1f) * MAX_DEAD_ZONE
-        val usefulTurn = withoutDeadZone(smoothedTurn, deadZone)
-        val usefulTilt = withoutDeadZone(smoothedTilt, deadZone)
-
         val scale = settings.speed * POINTER_UNITS_PER_RADIAN * seconds
         // Turning left (positive) moves the pointer left; tilting up (positive) moves it up.
         val horizontal = if (settings.invertHorizontal) 1f else -1f
         val vertical = if (settings.invertVertical) 1f else -1f
 
         return AirMotion(
-            turnRate = smoothedTurn,
-            tiltRate = smoothedTilt,
-            dx = horizontal * usefulTurn * scale,
-            dy = vertical * usefulTilt * scale,
+            dx = horizontal * withoutDeadZone(smoothedTurn, deadZone) * scale,
+            dy = vertical * withoutDeadZone(smoothedTilt, deadZone) * scale,
+            horizontalReading = Math.toDegrees(smoothedTurn.toDouble()).toFloat(),
+            verticalReading = Math.toDegrees(smoothedTilt.toDouble()).toFloat(),
         )
     }
 
-    /** Forgets timing and smoothing, e.g. after pausing, so the next reading starts fresh. */
     fun reset() {
         smoothedTurn = 0f
         smoothedTilt = 0f
         lastTimestampNanos = 0L
     }
-
-    /** The settings this needs, independent of how the app stores them. */
-    data class Settings(
-        val speed: Float,
-        val steadiness: Float,
-        val smoothing: Float,
-        val invertHorizontal: Boolean,
-        val invertVertical: Boolean,
-    )
-
-    /** Rates below [deadZone] become 0; above it, movement starts smoothly from 0. */
-    private fun withoutDeadZone(rate: Float, deadZone: Float): Float =
-        if (abs(rate) <= deadZone) 0f else rate - sign(rate) * deadZone
 
     private companion object {
         const val NANOS_PER_SECOND = 1_000_000_000f
@@ -130,4 +99,24 @@ class AirMotionProcessor {
         /** Smoothing 1 would freeze the pointer; cap it so movement always gets through. */
         const val MAX_SMOOTHING = 0.9f
     }
+}
+
+/** Pointing with the gyroscope: rotation is measured directly. */
+class GyroscopePointing : AirMouseController {
+
+    private val pointing = PointingProcessor()
+
+    override fun onReading(reading: SensorReading, settings: AirMotionSettings): AirMotion? =
+        when (reading.kind) {
+            SensorKind.GYROSCOPE -> pointing.onRotation(
+                reading.x, reading.y, reading.z, reading.timestampNanos, settings,
+            )
+            SensorKind.GRAVITY, SensorKind.ACCELEROMETER -> {
+                pointing.onGravity(reading.x, reading.y, reading.z)
+                null
+            }
+            SensorKind.MAGNETOMETER -> null
+        }
+
+    override fun reset() = pointing.reset()
 }

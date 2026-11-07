@@ -44,10 +44,13 @@ class AirMouseIllustrationState {
     /** Recent cursor positions, oldest first. */
     val trail = mutableStateListOf<Offset>()
 
-    /** Latest turn and tilt rates, in degrees per second. */
-    var turnDegreesPerSecond by mutableFloatStateOf(0f)
+    /**
+     * Latest readings behind the sideways and up/down movement: degrees per second when
+     * pointing, degrees of tilt when tilting (see [AirMotion]).
+     */
+    var horizontalReading by mutableFloatStateOf(0f)
         private set
-    var tiltDegreesPerSecond by mutableFloatStateOf(0f)
+    var verticalReading by mutableFloatStateOf(0f)
         private set
 
     fun onMotion(motion: AirMotion) {
@@ -58,15 +61,15 @@ class AirMouseIllustrationState {
         trail += cursor
         while (trail.size > TRAIL_LENGTH) trail.removeAt(0)
 
-        turnDegreesPerSecond = Math.toDegrees(motion.turnRate.toDouble()).toFloat()
-        tiltDegreesPerSecond = Math.toDegrees(motion.tiltRate.toDouble()).toFloat()
+        horizontalReading = motion.horizontalReading
+        verticalReading = motion.verticalReading
     }
 
     /** Clears the trail and readings, e.g. when the Air mouse is paused. */
     fun settle() {
         trail.clear()
-        turnDegreesPerSecond = 0f
-        tiltDegreesPerSecond = 0f
+        horizontalReading = 0f
+        verticalReading = 0f
     }
 }
 

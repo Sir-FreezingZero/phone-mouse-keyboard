@@ -26,13 +26,19 @@ green when connected, and blue with ripples running along it while input is bein
   - **⋮ → Keyboard settings:** a delay per character and a random extra delay, so long pasted
     text is typed out gradually (with a **Stop** button while it sends); typed text fading out of
     the box after a set time; phone autocorrect on or off; clear the box after Enter.
-- **Air mouse page:** point the top of the phone at the screen and turn it left/right or tilt
-  it up/down to move the pointer, like a TV remote. Uses the gyroscope, plus gravity to know
-  which way is up, so it works with the phone held flat or upright. The page shows a small
-  picture of a screen with the pointer moving on it, mirroring what's being sent, plus live
-  readings; Left/Right buttons sit underneath. Pause at any time.
-  - **⋮ → Air mouse settings:** speed, steadiness (ignores hand tremor), smoothing, move only
-    while touching, invert either direction.
+- **Air mouse page:** move the pointer by moving the phone. Two styles:
+  - **Point:** aim the top of the phone at the screen and turn or tilt it, like a TV remote.
+    Uses the gyroscope; on phones without one it uses the compass and accelerometer instead
+    (less precise, and affected by metal and magnets).
+  - **Tilt:** tip the phone like a joystick; the further you tip it, the faster the pointer
+    glides. Needs only the accelerometer, so it works on any phone. **Recenter** sets what
+    counts as level.
+
+  The page shows a small picture of a screen with the pointer moving on it, mirroring what's
+  being sent, plus live readings; Left/Right buttons sit underneath. Pause at any time. The
+  style is picked automatically (Point with a gyroscope, otherwise Tilt) until you choose one.
+  - **⋮ → Air mouse settings:** style, speed, steadiness (ignores hand tremor), smoothing,
+    move only while touching, invert either direction.
 - **Menu → Connect → Bluetooth:** one page for everything connection-related: permissions,
   pairing instructions, and connecting to or disconnecting from a computer.
 
@@ -58,6 +64,11 @@ Energy keyboards and mice: current Windows, macOS, Linux, ChromeOS, iPadOS and A
 - A phone that supports Bluetooth Low Energy advertising (most do).
 
 ## Building
+
+GitHub can build the APK for you: **Actions → Build and Release Android APK → Run workflow**.
+The APK is attached to a new release when it finishes. It only builds when started by hand.
+
+Or build locally:
 
 1. Open this folder in Android Studio (Ladybug or newer).
 2. Let Gradle sync. Android Studio will download the Gradle wrapper and dependencies.
@@ -102,8 +113,11 @@ app/src/main/java/io/github/phonemousekeyboard/
 │   ├── TextDiff.kt               Text box edits → Backspaces + typed characters
 │   ├── TypingQueue.kt            Sends key strokes one by one, with optional delays
 │   ├── InputActivity.kt          Whether input is being sent right now
-│   ├── AirMouseSensors.kt        Gyroscope + gravity readings for the Air mouse
-│   ├── AirMotionProcessor.kt     Phone rotation → pointer movement (pure, testable)
+│   ├── AirMotion.kt              Air mouse types: methods, readings, controllers
+│   ├── AirMouseSensors.kt        Which motion sensors the phone has; delivers readings
+│   ├── PointingProcessor.kt      Point style maths + gyroscope pointing
+│   ├── CompassPointing.kt        Point style without a gyroscope (compass + accelerometer)
+│   ├── TiltControl.kt            Tilt style (accelerometer joystick)
 │   └── MouseButton.kt
 └── ui/
     ├── MainScreen.kt             Header, current page, menu

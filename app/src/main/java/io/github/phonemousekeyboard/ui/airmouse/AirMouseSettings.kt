@@ -6,8 +6,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+/** How the user moves the phone to move the pointer. */
+enum class AirMouseStyle(val label: String) {
+    /** Aim the phone at the screen; turn and tilt it like a TV remote. */
+    POINT("Point"),
+
+    /** Tip the phone like a joystick; the further it's tipped, the faster the pointer moves. */
+    TILT("Tilt"),
+}
+
 /** How the Air mouse turns phone movement into pointer movement. */
 data class AirMouseSettings(
+    /**
+     * The chosen style, or null to pick automatically: Point on phones with a gyroscope,
+     * Tilt on phones without one.
+     */
+    val style: AirMouseStyle? = null,
     /** Multiplier from phone rotation to pointer movement. */
     val speed: Float = 1.0f,
     /**
@@ -48,6 +62,8 @@ class AirMouseSettingsStore(context: Context) {
         val defaults = AirMouseSettings()
         return with(preferences) {
             AirMouseSettings(
+                style = getString(KEY_STYLE, null)
+                    ?.let { saved -> AirMouseStyle.entries.firstOrNull { it.name == saved } },
                 speed = getFloat(KEY_SPEED, defaults.speed),
                 steadiness = getFloat(KEY_STEADINESS, defaults.steadiness),
                 smoothing = getFloat(KEY_SMOOTHING, defaults.smoothing),
@@ -60,6 +76,7 @@ class AirMouseSettingsStore(context: Context) {
 
     private fun save(settings: AirMouseSettings) {
         preferences.edit {
+            putString(KEY_STYLE, settings.style?.name)
             putFloat(KEY_SPEED, settings.speed)
             putFloat(KEY_STEADINESS, settings.steadiness)
             putFloat(KEY_SMOOTHING, settings.smoothing)
@@ -71,6 +88,7 @@ class AirMouseSettingsStore(context: Context) {
 
     private companion object {
         const val PREFERENCES_NAME = "air_mouse_settings"
+        const val KEY_STYLE = "style"
         const val KEY_SPEED = "speed"
         const val KEY_STEADINESS = "steadiness"
         const val KEY_SMOOTHING = "smoothing"
@@ -79,3 +97,7 @@ class AirMouseSettingsStore(context: Context) {
         const val KEY_WHILE_TOUCHING = "move_only_while_touching"
     }
 }
+
+/** The style in use: the user's choice, or the automatic pick for this phone. */
+fun AirMouseSettings.effectiveStyle(hasGyroscope: Boolean): AirMouseStyle =
+    style ?: if (hasGyroscope) AirMouseStyle.POINT else AirMouseStyle.TILT
