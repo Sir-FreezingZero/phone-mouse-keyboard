@@ -85,15 +85,19 @@ fun GamepadScreen(
             .fillMaxSize()
             .pagePadding(),
     ) {
-        val isLandscape = maxWidth > maxHeight
+        // Read here: Compose doesn't allow reading maxWidth/maxHeight from inside the nested
+        // Column and Row below (their scopes hide this one).
+        val pageWidth = maxWidth
+        val pageHeight = maxHeight
+        val isLandscape = pageWidth > pageHeight
 
         Column(verticalArrangement = Arrangement.spacedBy(Spacing)) {
             ShoulderButtons(press, actions.onRelease)
 
             if (isLandscape) {
                 val controlSize = minOf(
-                    (maxWidth - SmallButtonWidth - Spacing * 6) / 4,
-                    maxHeight - ShoulderRowHeight - Spacing,
+                    (pageWidth - SmallButtonWidth - Spacing * 6) / 4,
+                    pageHeight - ShoulderRowHeight - Spacing,
                     MaxControlSize,
                 )
                 Row(
@@ -111,8 +115,8 @@ fun GamepadScreen(
                 }
             } else {
                 val controlSize = minOf(
-                    (maxWidth - Spacing) / 2,
-                    (maxHeight - ShoulderRowHeight - SmallButtonHeight - Spacing * 4) / 2,
+                    (pageWidth - Spacing) / 2,
+                    (pageHeight - ShoulderRowHeight - SmallButtonHeight - Spacing * 4) / 2,
                     MaxControlSize,
                 )
                 Row(
