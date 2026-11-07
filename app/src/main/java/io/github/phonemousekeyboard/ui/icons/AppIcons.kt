@@ -80,6 +80,27 @@ object AppIcons {
         }
     }
 
+    /** A window with an arrow pointing out of it, for links that open in a browser. */
+    val Link: ImageVector by lazy {
+        lineIcon("Link") {
+            // Window: three sides of a rounded square, open at the top right for the arrow.
+            moveTo(10f, 5f)
+            horizontalLineTo(6.5f)
+            arcTo(1.5f, 1.5f, 0f, isMoreThanHalf = false, isPositiveArc = false, x1 = 5f, y1 = 6.5f)
+            verticalLineTo(17.5f)
+            arcTo(1.5f, 1.5f, 0f, isMoreThanHalf = false, isPositiveArc = false, x1 = 6.5f, y1 = 19f)
+            horizontalLineTo(17.5f)
+            arcTo(1.5f, 1.5f, 0f, isMoreThanHalf = false, isPositiveArc = false, x1 = 19f, y1 = 17.5f)
+            verticalLineTo(14f)
+            // Arrow pointing up and to the right.
+            moveTo(13f, 5f)
+            horizontalLineTo(19f)
+            verticalLineTo(11f)
+            moveTo(19f, 5f)
+            lineTo(11f, 13f)
+        }
+    }
+
     /** The Bluetooth rune. */
     val Bluetooth: ImageVector by lazy {
         lineIcon("Bluetooth") {

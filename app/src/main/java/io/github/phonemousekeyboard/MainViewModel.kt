@@ -13,6 +13,7 @@ import io.github.phonemousekeyboard.bluetooth.ble.BleHidTransport
 import io.github.phonemousekeyboard.bluetooth.displayName
 import io.github.phonemousekeyboard.input.HidInput
 import io.github.phonemousekeyboard.input.InputActivity
+import io.github.phonemousekeyboard.input.LinkOpener
 import io.github.phonemousekeyboard.input.MouseButton
 import io.github.phonemousekeyboard.input.SpecialKeys
 import io.github.phonemousekeyboard.input.TextDiff
@@ -25,6 +26,10 @@ import io.github.phonemousekeyboard.ui.bluetooth.DeviceItem
 import io.github.phonemousekeyboard.ui.bluetooth.DeviceStatus
 import io.github.phonemousekeyboard.ui.keyboard.KeyboardSettings
 import io.github.phonemousekeyboard.ui.keyboard.KeyboardSettingsStore
+import io.github.phonemousekeyboard.ui.links.Link
+import io.github.phonemousekeyboard.ui.links.LinksSettings
+import io.github.phonemousekeyboard.ui.links.LinksSettingsStore
+import io.github.phonemousekeyboard.ui.links.LinksStore
 import io.github.phonemousekeyboard.ui.mouse.MouseSettings
 import io.github.phonemousekeyboard.ui.mouse.MouseSettingsStore
 import kotlinx.coroutines.delay
@@ -51,12 +56,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val mouseSettingsStore = MouseSettingsStore(application)
     private val airMouseSettingsStore = AirMouseSettingsStore(application)
     private val keyboardSettingsStore = KeyboardSettingsStore(application)
+    private val linksStore = LinksStore(application)
+    private val linksSettingsStore = LinksSettingsStore(application)
 
     private val typingQueue = TypingQueue(
         scope = viewModelScope,
         type = { key -> input.typeKey(key) },
         pauseAfterKeyMillis = ::pauseAfterKeyMillis,
     )
+
+    private val linkOpener = LinkOpener(viewModelScope, typeKey = { key -> input.typeKey(key) })
 
     private var hasBluetoothPermission = false
 
@@ -186,6 +195,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             0
         }
         return (settings.characterDelayMillis + randomExtra).toLong()
+    }
+
+    // ---- Links ----
+
+    val links: StateFlow<List<Link>> = linksStore.links
+
+    val linksSettings: StateFlow<LinksSettings> = linksSettingsStore.settings
+
+    /** The address being opened on the computer right now, or null. */
+    val openingLinkAddress: StateFlow<String?> = linkOpener.openingAddress
+
+    fun updateLinksSettings(change: (LinksSettings) -> LinksSettings) =
+        linksSettingsStore.update(change)
+
+    fun resetLinksSettings() = linksSettingsStore.reset()
+
+    fun saveLink(link: Link) = linksStore.save(link)
+
+    fun deleteLink(link: Link) = linksStore.delete(link)
+
+    fun moveLink(link: Link, offset: Int) = linksStore.move(link, offset)
+
+    /** Opens [link] in the computer's browser, as chosen in [LinksSettings]. */
+    fun openLink(link: Link) {
+        val settings = linksSettings.value
+        linkOpener.open(
+            address = link.address,
+            target = settings.target,
+            shortcutKey = settings.shortcutKey,
+            waitMillis = settings.waitMillis.toLong(),
+        )
     }
 
     private fun onInputSent() {

@@ -30,6 +30,9 @@ import io.github.phonemousekeyboard.ui.bluetooth.BluetoothActions
 import io.github.phonemousekeyboard.ui.bluetooth.BluetoothScreen
 import io.github.phonemousekeyboard.ui.keyboard.KeyboardScreen
 import io.github.phonemousekeyboard.ui.keyboard.KeyboardSettingsSheet
+import io.github.phonemousekeyboard.ui.links.LinksActions
+import io.github.phonemousekeyboard.ui.links.LinksScreen
+import io.github.phonemousekeyboard.ui.links.LinksSettingsSheet
 import io.github.phonemousekeyboard.ui.mouse.MouseScreen
 import io.github.phonemousekeyboard.ui.mouse.MouseSettingsSheet
 import kotlinx.coroutines.launch
@@ -58,6 +61,9 @@ fun MainScreen(
     val airMouseSettings by viewModel.airMouseSettings.collectAsStateWithLifecycle()
     val keyboardSettings by viewModel.keyboardSettings.collectAsStateWithLifecycle()
     val pendingKeystrokes by viewModel.pendingKeystrokes.collectAsStateWithLifecycle()
+    val links by viewModel.links.collectAsStateWithLifecycle()
+    val linksSettings by viewModel.linksSettings.collectAsStateWithLifecycle()
+    val openingLinkAddress by viewModel.openingLinkAddress.collectAsStateWithLifecycle()
 
     var currentScreen by rememberSaveable { mutableStateOf(Screen.MOUSE) }
     // Where the back button returns to from a menu page.
@@ -69,6 +75,7 @@ fun MainScreen(
     val context = LocalContext.current
     val airMouseSensors = remember(context) { AirMouseSensors(context) }
     var isKeyboardSettingsOpen by rememberSaveable { mutableStateOf(false) }
+    var isLinksSettingsOpen by rememberSaveable { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -91,6 +98,7 @@ fun MainScreen(
         onOpenMouseSettings = { closeMenuAnd { isMouseSettingsOpen = true } },
         onOpenAirMouseSettings = { closeMenuAnd { isAirMouseSettingsOpen = true } },
         onOpenKeyboardSettings = { closeMenuAnd { isKeyboardSettingsOpen = true } },
+        onOpenLinksSettings = { closeMenuAnd { isLinksSettingsOpen = true } },
         onOpenSourceCode = {
             // Fails quietly if the phone has no browser.
             closeMenuAnd { runCatching { uriHandler.openUri(SOURCE_CODE_URL) } }
@@ -105,6 +113,15 @@ fun MainScreen(
             onOpenSystemSettings = systemActions.openBluetoothSettings,
             onConnect = viewModel::connect,
             onDisconnect = viewModel::disconnect,
+        )
+    }
+
+    val linksActions = remember(viewModel) {
+        LinksActions(
+            onOpen = viewModel::openLink,
+            onSave = viewModel::saveLink,
+            onDelete = viewModel::deleteLink,
+            onMove = viewModel::moveLink,
         )
     }
 
@@ -142,6 +159,11 @@ fun MainScreen(
                             settingsLabel = "Air mouse settings",
                             onOpenSettings = { isAirMouseSettingsOpen = true },
                             onReset = viewModel::resetAirMouseSettings,
+                        )
+                        Screen.LINKS -> settingsOverflowItems(
+                            settingsLabel = "Links settings",
+                            onOpenSettings = { isLinksSettingsOpen = true },
+                            onReset = viewModel::resetLinksSettings,
                         )
                         Screen.BLUETOOTH -> null
                     },
@@ -182,6 +204,14 @@ fun MainScreen(
                     modifier = contentModifier,
                 )
 
+                Screen.LINKS -> LinksScreen(
+                    links = links,
+                    isConnected = connectionState is ConnectionState.Connected,
+                    openingAddress = openingLinkAddress,
+                    actions = linksActions,
+                    modifier = contentModifier,
+                )
+
                 Screen.BLUETOOTH -> BluetoothScreen(
                     state = bluetoothState,
                     permissions = permissions,
@@ -218,6 +248,15 @@ fun MainScreen(
             onChange = viewModel::updateKeyboardSettings,
             onReset = viewModel::resetKeyboardSettings,
             onDismiss = { isKeyboardSettingsOpen = false },
+        )
+    }
+
+    if (isLinksSettingsOpen) {
+        LinksSettingsSheet(
+            settings = linksSettings,
+            onChange = viewModel::updateLinksSettings,
+            onReset = viewModel::resetLinksSettings,
+            onDismiss = { isLinksSettingsOpen = false },
         )
     }
 }

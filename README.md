@@ -6,7 +6,7 @@ being controlled: the phone shows up as an ordinary Bluetooth keyboard/mouse.
 
 ## Features
 
-The app has three main pages: Mouse, Keyboard and Air mouse. Swipe the title at the top to move between them;
+The app has four main pages: Mouse, Keyboard, Air mouse and Links. Swipe the title at the top to move between them;
 the names of the other pages show faintly either side of the current one.
 
 The line under the header shows the connection at a glance: grey when nothing is connected,
@@ -39,6 +39,12 @@ green when connected, and blue with ripples running along it while input is bein
   style is picked automatically (Point with a gyroscope, otherwise Tilt) until you choose one.
   - **⋮ → Air mouse settings:** style, speed, steadiness (ignores hand tremor), smoothing,
     move only while touching, invert either direction.
+- **Links page:** saved web pages. Tap one and the computer opens it: the app presses Ctrl+T
+  (new tab) or Ctrl+N (new window), types the address and presses Enter, so nothing needs
+  installing on the computer. Each link's ⋮ edits, moves or deletes it.
+  - **⋮ → Links settings:** open in a new tab, a new window, or the Windows Run box (opens the
+    default browser even when none is open); Ctrl or Cmd (Mac) for the shortcuts; how long to
+    wait for the tab or window before typing.
 - **Menu → Connect → Bluetooth:** one page for everything connection-related: permissions,
   pairing instructions, and connecting to or disconnecting from a computer.
 
@@ -118,6 +124,7 @@ app/src/main/java/io/github/phonemousekeyboard/
 │   ├── PointingProcessor.kt      Point style maths + gyroscope pointing
 │   ├── CompassPointing.kt        Point style without a gyroscope (compass + accelerometer)
 │   ├── TiltControl.kt            Tilt style (accelerometer joystick)
+│   ├── LinkOpener.kt             Opens a web address via browser shortcuts and typing
 │   └── MouseButton.kt
 └── ui/
     ├── MainScreen.kt             Header, current page, menu
@@ -130,6 +137,7 @@ app/src/main/java/io/github/phonemousekeyboard/
     ├── mouse/                    Trackpad, gestures, mouse buttons, mouse settings
     ├── keyboard/                 Text box page, keyboard settings
     ├── airmouse/                 Air mouse page, illustration, settings
+    ├── links/                    Links page, saved links, links settings
     ├── bluetooth/                Bluetooth settings page
     ├── components/               Reusable settings groups, rows and buttons
     └── theme/                    Minimal dark theme

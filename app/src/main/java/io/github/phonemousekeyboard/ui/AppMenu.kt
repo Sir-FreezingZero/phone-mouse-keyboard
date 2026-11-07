@@ -54,12 +54,14 @@ import io.github.phonemousekeyboard.ui.theme.IdleGrey
  *   │  🖱 Mouse                │   current page highlighted
  *   │  ⌨ Keyboard             │
  *   │  📱 Air mouse            │
+ *   │  ↗ Links                 │
  *   │ CONNECT                  │
  *   │  ᛒ Bluetooth            │
  *   │ SETTINGS                 │
  *   │  ≡ Mouse settings        │
  *   │  ≡ Keyboard settings     │
  *   │  ≡ Air mouse settings    │
+ *   │  ≡ Links settings        │
  *   │ ABOUT                    │
  *   │  </> Source code         │
  *   │                          │
@@ -86,6 +88,7 @@ data class MenuActions(
     val onOpenMouseSettings: () -> Unit,
     val onOpenAirMouseSettings: () -> Unit,
     val onOpenKeyboardSettings: () -> Unit,
+    val onOpenLinksSettings: () -> Unit,
     val onOpenSourceCode: () -> Unit,
 )
 
@@ -145,6 +148,7 @@ fun AppMenuContent(
             ScreenItem(Screen.MOUSE, AppIcons.Mouse, currentScreen, actions)
             ScreenItem(Screen.KEYBOARD, AppIcons.Keyboard, currentScreen, actions)
             ScreenItem(Screen.AIR_MOUSE, AppIcons.AirMouse, currentScreen, actions)
+            ScreenItem(Screen.LINKS, AppIcons.Link, currentScreen, actions)
 
             MenuSectionLabel("Connect")
             ScreenItem(Screen.BLUETOOTH, AppIcons.Bluetooth, currentScreen, actions)
@@ -153,6 +157,7 @@ fun AppMenuContent(
             MenuItem("Mouse settings", AppIcons.Tune, onClick = actions.onOpenMouseSettings)
             MenuItem("Keyboard settings", AppIcons.Tune, onClick = actions.onOpenKeyboardSettings)
             MenuItem("Air mouse settings", AppIcons.Tune, onClick = actions.onOpenAirMouseSettings)
+            MenuItem("Links settings", AppIcons.Tune, onClick = actions.onOpenLinksSettings)
 
             MenuSectionLabel("About")
             MenuItem("Source code", AppIcons.Code, onClick = actions.onOpenSourceCode)
